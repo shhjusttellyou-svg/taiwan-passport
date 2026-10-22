@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#173a32">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="集章護照">
+<title>寶島集章護照</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+body { margin: 0; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+
+/* Layout: a passport booklet — green cover band on top, celadon visa pages below, quests become red/blue ink 紀念章 when checked in. */
+:root {
+  --cover: #173a32; --cover-fg: #f1ead2; --gold: #b8954a;
+  --paper: #e6ede7; --page: #f7f9f5; --fg: #1d2a26; --muted: #5a6a64; --line: #cdd8d0;
+  --st-red: #c4372c; --st-blue: #2c4d99; --st-green: #2d7a4c; --st-plum: #7c3b8e; --st-brown: #9a5a1e;
+  --ok: #2d7a4c; --warn: #a3620f;
+  --f-display: "LXGW WenKai TC", "Kaiti TC", "STKaiti", "Noto Serif TC", serif;
+  --f-body: "Noto Sans TC", -apple-system, "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --cover: #0e2621; --cover-fg: #ede3c4; --gold: #d2b46a;
+  --paper: #0f1714; --page: #16201c; --fg: #e4ebe7; --muted: #94a59e; --line: #2a3832;
+  --st-red: #ec6a5d; --st-blue: #86a2ec; --st-green: #6cc493; --st-plum: #c58bd6; --st-brown: #d9995a;
+  --ok: #6cc493; --warn: #e3a54b; color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --cover: #0e2621; --cover-fg: #ede3c4; --gold: #d2b46a;
+  --paper: #0f1714; --page: #16201c; --fg: #e4ebe7; --muted: #94a59e; --line: #2a3832;
+  --st-red: #ec6a5d; --st-blue: #86a2ec; --st-green: #6cc493; --st-plum: #c58bd6; --st-brown: #d9995a;
+  --ok: #6cc493; --warn: #e3a54b; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.55; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--cover); }
+.wrap { max-width: 560px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+button, input, textarea, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* cover */
+.cover { background: var(--cover); color: var(--cover-fg); }
+.cover .wrap { padding-block: 22px 18px; display: grid; gap: 14px; }
+.crest { display: flex; align-items: center; gap: 12px; }
+.crest svg { flex: none; color: var(--gold); }
+.cover h1 { margin: 0; font-family: var(--f-display); font-weight: 700; font-size: 28px; letter-spacing: .08em; line-height: 1.15; text-wrap: balance; }
+.cover .sub { font-size: 11px; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); }
+.meter { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; align-items: end; }
+.meter .count { font-family: var(--f-mono); font-size: 34px; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.meter .count small { font-size: 15px; opacity: .7; }
+.meter .rank { font-family: var(--f-display); font-size: 18px; }
+.meter .rank span { display: block; font-family: var(--f-body); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.bar { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--cover-fg) 18%, transparent); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--gold); width: 0; transition: width .6s ease; }
+
+nav.tabs { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--cover); border-top: 1px solid color-mix(in srgb, var(--gold) 35%, transparent); }
+nav.tabs .wrap { display: flex; gap: 4px; }
+nav.tabs button { flex: 1; background: none; border: 0; color: var(--cover-fg); opacity: .65; padding: 10px 4px 9px; border-bottom: 3px solid transparent; font-size: 14px; }
+nav.tabs button small { display: block; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; }
+nav.tabs button[aria-selected="true"] { opacity: 1; border-bottom-color: var(--gold); }
+
+main .wrap { padding-block: 18px 48px; display: grid; gap: 22px; }
+h2 { margin: 0; font-family: var(--f-display); font-size: 21px; font-weight: 700; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+h2 small { font-family: var(--f-body); font-size: 11px; font-weight: 500; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.lead { margin: 4px 0 0; color: var(--muted); font-size: 13.5px; }
+.notice { padding: 12px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 13.5px; background: var(--page); }
+
+/* visa page of stamps */
+.visa { background: var(--page); border: 1px solid var(--line); border-radius: 6px; padding: 16px 12px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 4px; position: relative;
+  background-image: repeating-linear-gradient(0deg, transparent 0 27px, color-mix(in srgb, var(--line) 45%, transparent) 27px 28px); }
+.slot { border: 0; background: none; padding: 4px 0; display: grid; justify-items: center; gap: 2px; color: var(--muted); }
+.slot svg { width: 100%; max-width: 112px; height: auto; display: block; }
+.slot .lbl { font-size: 11.5px; text-align: center; line-height: 1.3; max-width: 100%; overflow-wrap: anywhere; }
+.slot.done .lbl { color: var(--fg); }
+.slot.fresh svg { animation: thunk .55s cubic-bezier(.2,1.6,.4,1) both; }
+@keyframes thunk { 0% { transform: scale(1.7) rotate(-14deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: none; } }
+
+/* quest list */
+.quests { display: grid; gap: 10px; }
+.q { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; text-align: left; width: 100%; background: var(--page); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.q .no { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-family: var(--f-mono); font-size: 13px; border: 1.5px dashed currentColor; color: var(--muted); }
+.q.done .no { border-style: solid; color: var(--ink); background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.q b { font-family: var(--f-display); font-size: 17px; font-weight: 700; display: block; line-height: 1.3; }
+.q .en { font-size: 12.5px; color: var(--muted); }
+.chip { display: inline-block; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); white-space: nowrap; }
+.chip.ok { color: var(--ok); border-color: currentColor; }
+.chip.ex { color: var(--warn); border-color: currentColor; }
+
+/* sheet */
+dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 92vh; margin: auto auto 0; border-radius: 16px 16px 0 0; background: var(--page); color: var(--fg); }
+dialog::backdrop { background: rgb(8 20 16 / .55); }
+.sheet { padding: 18px max(16px, env(safe-area-inset-left, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 16px; }
+.sheet-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.sheet-head h3 { margin: 4px 0 0; font-family: var(--f-display); font-size: 25px; line-height: 1.2; }
+.sheet-head .en { color: var(--muted); font-size: 13.5px; }
+.x { border: 1px solid var(--line); background: none; border-radius: 50%; width: 36px; height: 36px; flex: none; font-size: 18px; line-height: 1; }
+.clue { font-size: 15px; margin: 0; white-space: pre-wrap; }
+.phrase { border: 1.5px solid var(--ink, var(--st-red)); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; position: relative; }
+.phrase .tag { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--ink, var(--st-red)); font-weight: 700; }
+.phrase .zh { font-family: var(--f-display); font-size: 26px; line-height: 1.3; }
+.phrase .py { font-family: var(--f-mono); font-size: 13px; color: var(--muted); }
+.phrase .tw { font-size: 13px; }
+.phrase .tw em { font-style: normal; font-family: var(--f-mono); color: var(--muted); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { border: 1px solid var(--line); background: var(--page); border-radius: 99px; padding: 8px 14px; font-size: 14px; text-decoration: none; color: var(--fg); display: inline-flex; align-items: center; gap: 6px; }
+.btn.primary { background: var(--cover); color: var(--cover-fg); border-color: var(--cover); }
+.btn.ink { background: var(--ink, var(--st-red)); border-color: var(--ink, var(--st-red)); color: var(--page); font-weight: 700; }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.danger { color: var(--st-red); }
+.secret { border-radius: 10px; padding: 14px; background: color-mix(in srgb, var(--gold) 14%, var(--page)); border: 1px solid color-mix(in srgb, var(--gold) 50%, transparent); display: grid; gap: 10px; }
+.secret .tag { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.secret p { margin: 0; font-family: var(--f-display); font-size: 18px; white-space: pre-wrap; }
+.locked { text-align: center; color: var(--muted); font-size: 13.5px; padding: 14px; border: 1px dashed var(--line); border-radius: 10px; }
+.photo { width: 100%; border-radius: 8px; display: block; background: var(--paper); aspect-ratio: 4/3; object-fit: cover; max-width: 100%; }
+form.stack, .stack { display: grid; gap: 10px; }
+label.f { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted); }
+label.f input, label.f textarea, label.f select, .compose textarea { border: 1px solid var(--line); background: var(--paper); border-radius: 8px; padding: 9px 10px; font-size: 15px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 64px; }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 420px) { .grid2 { grid-template-columns: 1fr; } }
+.hint { font-size: 12px; color: var(--muted); margin: 0; }
+.status { font-size: 13px; color: var(--muted); min-height: 1.2em; }
+.status.err { color: var(--st-red); }
+
+/* notes */
+.compose { display: grid; gap: 8px; }
+.notes { display: grid; gap: 10px; }
+.note { display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 10px; }
+.note img.av { width: 32px; height: 32px; border-radius: 50%; }
+.note .bubble { background: var(--page); border: 1px solid var(--line); border-radius: 4px 12px 12px 12px; padding: 8px 12px; min-width: 0; }
+.note.mine .bubble { border-color: color-mix(in srgb, var(--st-red) 45%, var(--line)); }
+.note .who { font-size: 12px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.note .who time { font-family: var(--f-mono); }
+.note p { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* guide */
+.feed { display: grid; gap: 10px; }
+.feed-item { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 12px; background: var(--page); border: 1px solid var(--line); border-radius: 10px; padding: 10px; align-items: center; }
+.feed-item img { width: 72px; height: 72px; object-fit: cover; border-radius: 6px; background: var(--paper); }
+.feed-item .ph { width: 72px; height: 72px; border-radius: 6px; background: var(--paper); display: grid; place-items: center; color: var(--muted); font-size: 11px; }
+.feed-item time { font-family: var(--f-mono); font-size: 12px; color: var(--muted); }
+.qadmin { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.qadmin b { font-family: var(--f-display); }
+@media (prefers-reduced-motion: reduce) { .slot.fresh svg { animation: none; } .bar i { transition: none; } }
+
+.links { display: grid; gap: 10px; }
+.link-box { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
+.link-box code { font-family: var(--f-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; }
+.gps { font-size: 12.5px; color: var(--muted); }
+.gps.ok { color: var(--ok); }
+.gps.far { color: var(--warn); }
+.hero-setup { display: grid; gap: 14px; padding: 18px; border-radius: 12px; background: var(--page); border: 1px solid var(--line); }
+.hero-setup h2 { font-size: 22px; }
+.hero-setup ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; color: var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="inkgrain" x="-10%" y="-10%" width="120%" height="120%">
+    <feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="4" result="n"/>
+    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.6 1.25" result="m"/>
+    <feComposite in="SourceGraphic" in2="m" operator="in"/>
+  </filter>
+</defs></svg>
+<header class="cover">
+  <div class="wrap">
+    <div class="crest">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="22" cy="22" r="16" fill="none" stroke="currentColor" stroke-width=".8" stroke-dasharray="2 2"/><path d="M25 9c3 4 5 9 4 14-1 5-4 9-8 12-1-3-1-5 0-8-2-2-3-5-2-8 1-4 4-7 6-10z" fill="currentColor"/></svg>
+      <div>
+        <div class="sub">Republic of Adventures · 寶島</div>
+        <h1>寶島集章護照</h1>
+      </div>
+    </div>
+    <div class="meter">
+      <div class="count" id="count">0<small> / 0</small></div>
+      <div class="rank" id="rank"><span>Rank · 等級</span>觀光客 Tourist</div>
+      <div class="bar"><i id="bar"></i></div>
+    </div>
+  </div>
+</header>
+<nav class="tabs" aria-label="Sections">
+  <div class="wrap" role="tablist">
+    <button role="tab" data-v="passport" aria-selected="true">護照<small>Passport</small></button>
+    <button role="tab" data-v="notes" aria-selected="false">留言<small>Notes</small></button>
+    <button role="tab" data-v="guide" aria-selected="false" hidden id="tab-guide">出題<small>Guide</small></button>
+  </div>
+</nav>
+<main><div class="wrap" id="view"></div></main>
+<dialog id="sheet"><div class="sheet" id="sheet-body"></div></dialog>
+
+<script type="module">
+/* ============================================================
+   1) 把 Firebase 給你的設定貼在這裡（Project settings → Your apps → SDK setup and configuration → Config）
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "PASTE_YOUR_API_KEY",
+  authDomain: "PASTE.firebaseapp.com",
+  projectId: "PASTE_PROJECT_ID",
+  storageBucket: "PASTE.appspot.com",
+  messagingSenderId: "PASTE",
+  appId: "PASTE"
+};
+/* ============================================================ */
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, setDoc, deleteDoc, addDoc, query, orderBy, limit, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const INKS = ["st-red", "st-blue", "st-green", "st-plum", "st-brown"];
+const INK_NAMES = { "st-red": "朱紅 Red", "st-blue": "藍 Blue", "st-green": "綠 Green", "st-plum": "紫 Plum", "st-brown": "褐 Brown" };
+const RANKS = [[0, "觀光客", "Tourist"], [3, "背包客", "Backpacker"], [6, "在地人", "Local"], [10, "台灣通", "Taiwan Expert"]];
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtDate = t => { const d = new Date(t); return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`; };
+const fmtTime = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const fmtDist = m => m < 1000 ? Math.round(m) + " m" : (m / 1000).toFixed(1) + " km";
+const hash = s => [...String(s)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+const params = new URLSearchParams(location.search);
+const tripId = params.get("trip");
+const isGuide = params.get("role") === "guide";
+let device = store.get("tsp-dev"); if (!device) { device = randomId(12); store.set("tsp-dev", device); }
+function randomId(n) { const a = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789", b = crypto.getRandomValues(new Uint8Array(n)); return [...b].map(x => a[x % a.length]).join(""); }
+
+let fs = null, ready = false, failed = "";
+let quests = [], checkins = {}, notes = [];
+let view = store.get("tsp-view") || "passport", fresh = null;
+const configured = !firebaseConfig.apiKey.startsWith("PASTE");
+
+/* ---------- distance / GPS ---------- */
+function haversine(a, b, c, d) {
+  const R = 6371000, r = x => x * Math.PI / 180, dLa = r(c - a), dLo = r(d - b);
+  const h = Math.sin(dLa / 2) ** 2 + Math.cos(r(a)) * Math.cos(r(c)) * Math.sin(dLo / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+function locate() {
+  return new Promise((res, rej) => {
+    if (!navigator.geolocation) return rej(new Error("no_geo"));
+    navigator.geolocation.getCurrentPosition(p => res(p.coords), rej, { enableHighAccuracy: true, timeout: 15000, maximumAge: 20000 });
+  });
+}
+function parseCoords(s) {
+  const m = String(s || "").match(/(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)/);
+  return m ? { lat: Number(m[1]), lng: Number(m[2]) } : null;
+}
+
+/* ---------- stamps ---------- */
+function inkOf(q) { return q.ink && INKS.includes(q.ink) ? q.ink : INKS[Math.abs(hash(q.id)) % INKS.length]; }
+function shortZh(q) { return q.stampZh || (q.titleZh || "").replace(/[（(].*$/, "").slice(0, 4); }
+function stampSVG(q, c) {
+  const ink = inkOf(q), rot = (Math.abs(hash(q.id)) % 24) - 12, pid = "p" + q.id.replace(/\W/g, "");
+  const ring = esc((q.titleEn || q.area || "TAIWAN").toUpperCase().slice(0, 26));
+  const zh = esc(shortZh(q)), size = zh.length > 3 ? 20 : 25;
+  return `<svg viewBox="0 0 120 120" style="color:var(--${ink})" aria-hidden="true"><g filter="url(#inkgrain)" transform="rotate(${rot} 60 60)" fill="none" stroke="currentColor">
+    <circle cx="60" cy="60" r="54" stroke-width="3.2"/><circle cx="60" cy="60" r="40" stroke-width="1.2"/>
+    <path id="${pid}" d="M 16 60 A 44 44 0 0 1 104 60" stroke="none"/>
+    <text font-family="JetBrains Mono, monospace" font-size="8.5" font-weight="600" letter-spacing="1.5" fill="currentColor" stroke="none" text-anchor="middle"><textPath href="#${pid}" startOffset="50%">${ring}</textPath></text>
+    <text x="60" y="${62 + size / 3}" font-family="LXGW WenKai TC, Kaiti TC, serif" font-weight="700" font-size="${size}" fill="currentColor" stroke="none" text-anchor="middle">${zh}</text>
+    <text x="60" y="94" font-family="JetBrains Mono, monospace" font-size="7.5" fill="currentColor" stroke="none" text-anchor="middle">${fmtDate(c.at)}</text>
+    <text x="60" y="34" font-size="9" fill="currentColor" stroke="none" text-anchor="middle">★</text></g></svg>`;
+}
+function emptySVG(i) {
+  return `<svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="50" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="4 5" opacity=".6"/>
+    <text x="60" y="68" font-family="JetBrains Mono, monospace" font-size="20" fill="currentColor" opacity=".55" text-anchor="middle">${String(i + 1).padStart(2, "0")}</text></svg>`;
+}
+
+/* ---------- views ---------- */
+function renderHeader() {
+  const done = quests.filter(q => checkins[q.id]).length;
+  $("#count").innerHTML = `${done}<small> / ${quests.length}</small>`;
+  const r = [...RANKS].reverse().find(r => done >= r[0]);
+  const next = RANKS.find(x => x[0] > done);
+  $("#rank").innerHTML = `<span>Rank · 等級${next ? ` — ${next[0] - done} more to ${esc(next[2])}` : ""}</span>${r[1]} ${r[2]}`;
+  $("#bar").style.width = quests.length ? (done / quests.length * 100) + "%" : "0";
+  $("#tab-guide").hidden = !isGuide;
+  if (view === "guide" && !isGuide) view = "passport";
+  document.querySelector("nav.tabs").hidden = !tripId || !configured;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.v === view));
+}
+
+function renderSetup() {
+  if (!configured) return `<div class="hero-setup"><h2>還差一步 · Almost there</h2>
+    <p class="lead">這個檔案還沒有連上 Firebase。打開 <code>index.html</code>，把 Firebase 給你的設定貼到最上面的 <code>firebaseConfig</code>，再重新上傳到 GitHub。</p></div>`;
+  const last = store.get("tsp-last");
+  return `<div class="hero-setup"><h2>開一本新護照 <small>New passport</small></h2>
+    <ol><li>按下面的按鈕建立你們的護照（會先放 6 個範例任務）。</li><li>你會拿到兩個連結：出題者用的、旅人用的。</li><li>把「旅人連結」傳給對方，自己留著「出題者連結」。</li></ol>
+    <div class="row"><button class="btn primary" id="create">建立我們的護照</button>${last ? `<a class="btn" href="${esc(last)}">回到上次的護照</a>` : ""}</div>
+    <div class="status" id="create-status"></div></div>`;
+}
+
+function renderPassport() {
+  if (!ready) return `<div class="notice">${failed ? esc(failed) : "正在打開護照… Opening your passport…"}</div>`;
+  if (!quests.length) return `<div class="notice"><b>還沒有任務 · No quests yet.</b><br>${isGuide ? "到「出題 Guide」分頁新增第一個地點。" : "Your guide is still hiding the first stamps. Check back soon."}</div>`;
+  const slots = quests.map((q, i) => {
+    const c = checkins[q.id];
+    return `<button class="slot ${c ? "done" : ""} ${fresh === q.id ? "fresh" : ""}" data-q="${esc(q.id)}" aria-label="${esc(q.titleEn || q.titleZh)}${c ? " — collected" : ""}">
+      ${c ? stampSVG(q, c) : emptySVG(i)}<span class="lbl">${esc(c ? q.titleZh : (q.area || "???"))}</span></button>`;
+  }).join("");
+  const list = quests.map((q, i) => {
+    const c = checkins[q.id];
+    return `<button class="q ${c ? "done" : ""}" data-q="${esc(q.id)}" style="--ink:var(--${inkOf(q)})">
+      <span class="no">${c ? "✓" : String(i + 1).padStart(2, "0")}</span>
+      <span><b>${esc(q.titleZh)}</b><span class="en">${esc(q.titleEn)}${q.area ? " · " + esc(q.area) : ""}</span></span>
+      <span class="chip ${c ? "ok" : q.example ? "ex" : ""}">${c ? "集到了" : q.example ? "範例" : esc(q.cat || "Quest")}</span></button>`;
+  }).join("");
+  return `<section class="stack"><h2>簽證頁 <small>Stamp page</small></h2><div class="visa">${slots}</div></section>
+    <section class="stack"><h2>任務 <small>Quests</small></h2><p class="lead">Tap a quest, go there, learn the phrase, then check in on the spot. Your phone's GPS confirms you're there and the stamp unlocks a hidden message.</p><div class="quests">${list}</div></section>`;
+}
+
+function myName() { return store.get("tsp-name") || ""; }
+function renderNotes() {
+  const stickers = [["想你了", "Miss you"], ["到了！", "I'm here!"], ["好好吃！", "So delicious!"], ["晚安", "Good night"]];
+  return `<section class="stack"><h2>留言板 <small>Notes between us</small></h2>
+    <div class="compose"><label class="f">你的名字 · Your name<input id="note-name" maxlength="30" placeholder="${isGuide ? "e.g. 小晏" : "e.g. Alex"}"></label>
+    <textarea id="note-text" placeholder="寫點什麼… Write something…" maxlength="600"></textarea>
+    <div class="row">${stickers.map(s => `<button class="btn" data-sticker="${esc(s[0] + " " + s[1])}">${esc(s[0])} <span class="hint">${esc(s[1])}</span></button>`).join("")}
+    <button class="btn primary" id="note-send">送出 Send</button></div><div class="status" id="note-status"></div></div>
+    <div class="notes" id="notes-list"></div></section>`;
+}
+function paintNotes() {
+  const host = $("#notes-list"); if (!host) return;
+  host.textContent = "";
+  if (!notes.length) { host.innerHTML = `<div class="notice">還沒有留言。Leave the first note — it shows up on both phones.</div>`; return; }
+  for (const n of notes) {
+    const mine = n.dev === device;
+    const el = document.createElement("div");
+    el.className = "note" + (mine ? " mine" : "");
+    el.innerHTML = `<span class="av" style="width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-size:14px;background:color-mix(in srgb, var(--${mine ? "st-red" : "st-blue"}) 18%, var(--page));color:var(--${mine ? "st-red" : "st-blue"})"></span><div class="bubble"><div class="who"><b></b><time></time></div><p></p></div>`;
+    const who = mine ? "你 You" : (n.name || "旅伴 Partner");
+    el.querySelector(".av").textContent = (n.name || "?").slice(0, 1);
+    el.querySelector("b").textContent = who;
+    el.querySelector("time").textContent = fmtTime(n.at);
+    el.querySelector("p").textContent = n.text;
+    host.appendChild(el);
+  }
+}
+
+function links() {
+  const base = location.origin + location.pathname + "?trip=" + encodeURIComponent(tripId);
+  return { traveler: base, guide: base + "&role=guide" };
+}
+function renderGuide() {
+  const L = links();
+  const done = quests.filter(q => checkins[q.id]).sort((a, b) => checkins[b.id].at - checkins[a.id].at);
+  const feed = done.map(q => {
+    const c = checkins[q.id];
+    const g = c.dist != null ? `<span class="gps ok">📍 距離地點 ${fmtDist(c.dist)}</span>` : `<span class="gps far">📍 沒有用 GPS 驗證</span>`;
+    return `<div class="feed-item">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<div class="ph">no photo</div>`}
+      <div><b>${esc(q.titleZh)}</b> <time>${fmtTime(c.at)}</time><br>${g}<p class="hint" data-note="${esc(q.id)}" style="margin-top:4px"></p></div></div>`;
+  }).join("");
+  const admin = quests.map((q, i) => `<div class="qadmin"><div><b>${String(i + 1).padStart(2, "0")} ${esc(q.titleZh)}</b> <span class="hint">${esc(q.titleEn)}</span> ${q.example ? `<span class="chip ex">範例</span>` : ""} ${q.lat != null ? "" : `<span class="chip">無 GPS</span>`}</div>
+      <button class="btn" data-edit="${esc(q.id)}">編輯</button></div>`).join("");
+  return `<section class="stack"><h2>分享連結 <small>Links</small></h2><div class="links">
+      <div class="link-box"><b>旅人連結 · 傳給對方</b><code id="lk-t"></code><div class="row"><button class="btn primary" data-copy="lk-t">複製</button></div></div>
+      <div class="link-box"><b>出題者連結 · 你自己留著，不要傳出去</b><code id="lk-g"></code><div class="row"><button class="btn" data-copy="lk-g">複製</button></div></div></div>
+      <p class="hint">知道連結的人就能打開這本護照，請只傳給對方。</p></section>
+    <section class="stack"><h2>打卡動態 <small>Live check-ins</small></h2>${feed ? `<div class="feed">${feed}</div>` : `<div class="notice">對方還沒打卡。打卡後照片會即時出現在這裡。</div>`}</section>
+    <section class="stack"><h2>任務設定 <small>Your quests</small></h2>
+    <p class="lead">秘密訊息要在那個地點打卡後才會出現。標「範例」的任務是先放的示範，請改成你們自己的內容或刪掉。</p>
+    <div>${admin}</div><div class="row"><button class="btn primary" data-edit="">＋ 新增地點</button></div></section>`;
+}
+
+function render() {
+  renderHeader();
+  const v = $("#view");
+  const draft = $("#note-text")?.value || "";
+  if (!configured || !tripId) { v.innerHTML = renderSetup(); return; }
+  v.innerHTML = view === "notes" ? renderNotes() : view === "guide" ? renderGuide() : renderPassport();
+  if (view === "guide") {
+    const L = links(); $("#lk-t").textContent = L.traveler; $("#lk-g").textContent = L.guide;
+    v.querySelectorAll("[data-note]").forEach(p => { p.textContent = checkins[p.dataset.note]?.note || ""; });
+  }
+  if (view === "notes") { $("#note-text").value = draft; $("#note-name").value = myName(); paintNotes(); }
+  fresh = null;
+  if ($("#sheet").open && openQuestId) renderSheet();
+}
+
+/* ---------- quest sheet ---------- */
+let openQuestId = null, busy = false, sheetKey = "";
+function openQuest(id) { openQuestId = id; sheetKey = ""; renderSheet(); if (!$("#sheet").open) $("#sheet").showModal(); }
+function renderSheet() {
+  const q = quests.find(x => x.id === openQuestId); if (!q) return $("#sheet").close();
+  const c = checkins[q.id], body = $("#sheet-body");
+  const key = JSON.stringify([q, c || null]); if (key === sheetKey) return; sheetKey = key;
+  body.style.setProperty("--ink", `var(--${inkOf(q)})`);
+  const maps = q.lat != null ? `https://www.google.com/maps/search/?api=1&query=${q.lat},${q.lng}` : "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(q.place || q.titleZh);
+  body.innerHTML = `<div class="sheet-head"><div><span class="chip">${esc(q.area || "")}${q.cat ? " · " + esc(q.cat) : ""}</span>
+      <h3>${esc(q.titleZh)}</h3><div class="en">${esc(q.titleEn)}</div></div><button class="x" data-close aria-label="Close">×</button></div>
+    ${q.example ? `<div class="notice">範例任務 · Example quest — your guide can replace it.</div>` : ""}
+    ${q.clue ? `<p class="clue">${esc(q.clue)}</p>` : ""}
+    ${q.phraseZh ? `<div class="phrase"><span class="tag">Say it here · 這裡用得到</span><span class="zh">${esc(q.phraseZh)}</span>
+      ${q.phrasePy ? `<span class="py">${esc(q.phrasePy)}</span>` : ""}<span>${esc(q.phraseEn || "")}</span>
+      ${q.phraseTw ? `<span class="tw">台語 Taiwanese: ${esc(q.phraseTw)}</span>` : ""}
+      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div></div>` : ""}
+    <div class="row"><a class="btn" href="${esc(maps)}" target="_blank" rel="noopener">📍 Google Maps</a>${q.lat != null && !c ? `<button class="btn" data-where>我離這裡多遠？ How far?</button>` : ""}</div>
+    <div class="gps" id="where"></div>
+    ${c ? `<div class="stack"><span class="chip ok" style="justify-self:start">集到了 · Collected ${fmtDate(c.at)}</span>
+        ${c.photo ? `<img class="photo" src="${esc(c.photo)}" alt="Check-in photo">` : ""}<p class="hint" id="c-note"></p></div>
+        <div class="secret"><span class="tag">秘密訊息 · Unlocked message</span><p id="secret-text"></p>${q.secretPhoto ? `<img class="photo" src="${esc(q.secretPhoto)}" alt="">` : ""}</div>
+        ${isGuide ? `<div class="row"><button class="btn danger" data-uncheck>撤銷打卡 Undo check-in</button></div>` : ""}`
+      : `<div class="locked">🔒 A hidden message unlocks when you check in here.<br>到這裡打卡就能解鎖秘密訊息。</div>
+        <form class="stack" id="checkin"><label class="f">在現場拍一張照 · Photo at the spot
+          <input type="file" id="ci-photo" accept="image/*" capture="environment"></label>
+          <label class="f">一句話 · A line about it (optional)<textarea id="ci-note" maxlength="400" placeholder="What did you try? 你點了什麼？"></textarea></label>
+          <button class="btn ink" type="submit">蓋章！ Stamp it</button><div class="status" id="ci-status"></div>
+          <button class="btn" type="button" id="ci-override" hidden>GPS 不準，我確定我在這裡 · I'm really here</button></form>`}`;
+  if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）"; }
+}
+async function shrinkToDataURL(file, max = 1024) {
+  const bmp = await createImageBitmap(file);
+  const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+  const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * k); cv.height = Math.round(bmp.height * k);
+  cv.getContext("2d").drawImage(bmp, 0, 0, cv.width, cv.height);
+  for (const qual of [.75, .6, .45]) { const u = cv.toDataURL("image/jpeg", qual); if (u.length < 700000) return u; }
+  return cv.toDataURL("image/jpeg", .3);
+}
+async function doCheckin(override) {
+  if (busy) return; busy = true;
+  const q = quests.find(x => x.id === openQuestId), st = $("#ci-status"), btn = $("#checkin button[type=submit]"), ov = $("#ci-override");
+  st.className = "status"; btn.disabled = true; ov.hidden = true;
+  try {
+    let dist = null;
+    if (q.lat != null && !override) {
+      st.textContent = "定位中… Checking your location…";
+      try {
+        const p = await locate();
+        dist = haversine(p.latitude, p.longitude, q.lat, q.lng);
+        const radius = q.radius || 300, slack = Math.min(p.accuracy || 0, 150);
+        if (dist - slack > radius) {
+          st.className = "status err"; st.textContent = `還差 ${fmtDist(dist)}，再靠近一點！ You're ${fmtDist(dist)} away — get closer.`;
+          ov.hidden = false; btn.disabled = false; return;
+        }
+      } catch (e) {
+        st.className = "status err"; st.textContent = "抓不到定位（請允許瀏覽器使用位置）。Couldn't get your location — allow location access and try again.";
+        ov.hidden = false; btn.disabled = false; return;
+      }
+    }
+    st.textContent = "蓋章中… Stamping…";
+    const f = $("#ci-photo").files[0];
+    const photo = f ? await shrinkToDataURL(f) : null;
+    await setDoc(doc(fs, "trips", tripId, "checkins", q.id), { photo, note: $("#ci-note").value.trim(), at: Date.now(), dist: dist == null ? null : Math.round(dist), dev: device });
+    fresh = q.id;
+    try { navigator.vibrate?.(60); } catch (_) {}
+  } catch (err) {
+    st.className = "status err"; st.textContent = "沒成功，再試一次。Didn't save — try again. (" + (err?.code || err?.message || "error") + ")";
+    btn.disabled = false;
+  } finally { busy = false; }
+}
+function speak(text) {
+  try { const u = new SpeechSynthesisUtterance(text); u.lang = "zh-TW"; u.rate = .85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+}
+
+/* ---------- guide editor ---------- */
+const FIELDS = [["titleZh", "地點名稱（中文）"], ["titleEn", "Place name (English)"], ["stampZh", "印章上的字（2–4 字）"], ["area", "區域 e.g. 台北 · 大稻埕"], ["cat", "類型 e.g. Food / View / Temple"], ["place", "Google Maps 搜尋字"]];
+const TEXTS = ["clue", "phraseZh", "phrasePy", "phraseEn", "phraseTw", "secret"];
+let pendingDelete = null;
+function openEditor(id) {
+  openQuestId = null;
+  const q = quests.find(x => x.id === id) || { id: "", order: quests.length ? Math.max(...quests.map(x => x.order || 0)) + 1 : 1 };
+  const body = $("#sheet-body"); body.style.removeProperty("--ink");
+  body.innerHTML = `<div class="sheet-head"><div><span class="chip">出題 Guide</span><h3>${q.id ? "編輯任務" : "新增任務"}</h3></div><button class="x" data-close aria-label="Close">×</button></div>
+    <form class="stack" id="editor"><div class="grid2">${FIELDS.map(([k, l]) => `<label class="f">${l}<input id="e-${k}"></label>`).join("")}</div>
+    <div class="grid2"><label class="f">GPS 座標（緯度, 經度）<input id="e-coords" inputmode="decimal" placeholder="25.0330, 121.5297"></label>
+    <label class="f">打卡範圍（公尺）<input id="e-radius" type="number" inputmode="numeric" placeholder="300"></label></div>
+    <div class="row"><button class="btn" type="button" id="e-here">用我現在的位置</button></div>
+    <p class="hint">在 Google Maps 長按地點，最上面會出現座標，點一下複製再貼過來。不填座標的話，這關不檢查 GPS。</p>
+    <label class="f">提示 / 任務說明 Clue<textarea id="e-clue"></textarea></label>
+    <div class="grid2"><label class="f">要學的一句中文<input id="e-phraseZh"></label><label class="f">拼音 Pinyin<input id="e-phrasePy"></label>
+    <label class="f">English meaning<input id="e-phraseEn"></label><label class="f">台語（可不填）<input id="e-phraseTw"></label></div>
+    <label class="f">秘密訊息（打卡後才看得到）<textarea id="e-secret" placeholder="只有你們懂的那段回憶…"></textarea></label>
+    <label class="f">秘密照片（可不填）<input type="file" id="e-photo" accept="image/*"></label>
+    ${q.secretPhoto ? `<img class="photo" src="${esc(q.secretPhoto)}" alt="">` : ""}
+    <div class="grid2"><label class="f">順序 Order<input id="e-order" type="number" inputmode="numeric"></label>
+    <label class="f">印章顏色 Ink<select id="e-ink">${INKS.map(k => `<option value="${k}">${INK_NAMES[k]}</option>`).join("")}</select></label></div>
+    <div class="row"><button class="btn primary" type="submit">儲存 Save</button>${q.id ? `<button class="btn danger" type="button" data-del="${esc(q.id)}">刪除 Delete</button>` : ""}</div>
+    <div class="status" id="e-status"></div></form>`;
+  for (const k of [...FIELDS.map(f => f[0]), ...TEXTS, "order", "radius"]) $("#e-" + k).value = q[k] ?? "";
+  $("#e-coords").value = q.lat != null ? `${q.lat}, ${q.lng}` : "";
+  $("#e-ink").value = q.id ? inkOf(q) : INKS[quests.length % INKS.length];
+  $("#e-here").onclick = async () => {
+    const st = $("#e-status"); st.className = "status"; st.textContent = "定位中…";
+    try { const p = await locate(); $("#e-coords").value = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`; st.textContent = `已填入（誤差約 ${Math.round(p.accuracy)} m）`; }
+    catch (e) { st.className = "status err"; st.textContent = "抓不到定位，請允許瀏覽器使用位置。"; }
+  };
+  $("#editor").onsubmit = async ev => {
+    ev.preventDefault(); const st = $("#e-status"); st.className = "status"; st.textContent = "儲存中…";
+    try {
+      const id = q.id || "q" + Date.now().toString(36);
+      const data = { order: Number($("#e-order").value) || 0, ink: $("#e-ink").value, example: false, secretPhoto: q.secretPhoto || null };
+      for (const k of [...FIELDS.map(f => f[0]), ...TEXTS]) data[k] = $("#e-" + k).value.trim();
+      if (!data.titleZh && !data.titleEn) { st.className = "status err"; st.textContent = "至少填一個地點名稱。"; return; }
+      const raw = $("#e-coords").value.trim(), co = parseCoords(raw);
+      if (raw && !co) { st.className = "status err"; st.textContent = "座標格式看不懂，請用「25.0330, 121.5297」這種格式。"; return; }
+      data.lat = co ? co.lat : null; data.lng = co ? co.lng : null;
+      data.radius = Number($("#e-radius").value) || 300;
+      const f = $("#e-photo").files[0]; if (f) data.secretPhoto = await shrinkToDataURL(f);
+      await setDoc(doc(fs, "trips", tripId, "quests", id), data);
+      $("#sheet").close();
+    } catch (err) { st.className = "status err"; st.textContent = "沒有存成功：" + (err?.code || err?.message || "error"); }
+  };
+  if (!$("#sheet").open) $("#sheet").showModal();
+}
+
+/* ---------- example quests for a new passport ---------- */
+const PH = "（範例）在這裡寫一段只有你們懂的話，打卡後才會出現。";
+const EXAMPLES = [
+  { order: 1, ink: "st-red", titleZh: "永康街小籠包", titleEn: "Soup Dumplings on Yongkang St", stampZh: "小籠包", area: "台北 · 大安", cat: "Food", place: "永康街 小籠包", lat: 25.0330, lng: 121.5297, radius: 300, clue: "Find a steamy dumpling shop on Yongkang Street. Order a basket of 小籠包, put one on the spoon, poke a hole and sip the soup before you bite.", phraseZh: "我要一籠小籠包", phrasePy: "wǒ yào yì lóng xiǎolóngbāo", phraseEn: "I'd like one basket of soup dumplings", phraseTw: "" },
+  { order: 2, ink: "st-blue", titleZh: "象山看夕陽", titleEn: "Sunset from Elephant Mountain", stampZh: "象山", area: "台北 · 信義", cat: "View", place: "象山步道", lat: 25.0273, lng: 121.5762, radius: 500, clue: "Climb the steps of Elephant Mountain (about 20 minutes). Stop at the big rocks and take a photo with Taipei 101 in the frame.", phraseZh: "好美喔！", phrasePy: "hǎo měi o!", phraseEn: "So beautiful!", phraseTw: "真媠！ (tsin suí!)" },
+  { order: 3, ink: "st-green", titleZh: "便利商店茶葉蛋", titleEn: "Tea Egg at a 7-Eleven", stampZh: "茶葉蛋", area: "任何地方 · Anywhere", cat: "Food", place: "7-Eleven", lat: null, lng: null, radius: 300, clue: "Any convenience store has a pot of tea eggs by the counter. Grab one and pay with your EasyCard (悠遊卡).", phraseZh: "可以刷悠遊卡嗎？", phrasePy: "kěyǐ shuā yōuyóukǎ ma?", phraseEn: "Can I pay with EasyCard?", phraseTw: "" },
+  { order: 4, ink: "st-plum", titleZh: "龍山寺擲筊", titleEn: "Moon Blocks at Longshan Temple", stampZh: "龍山寺", area: "台北 · 萬華", cat: "Temple", place: "艋舺龍山寺", lat: 25.0372, lng: 121.4999, radius: 250, clue: "Ask the gods a yes/no question by throwing the two red crescent blocks (筊杯). One flat side up and one round side up means yes.", phraseZh: "謝謝", phrasePy: "xièxie", phraseEn: "Thank you", phraseTw: "多謝 (to-siā)" },
+  { order: 5, ink: "st-brown", titleZh: "寧夏夜市", titleEn: "Ningxia Night Market", stampZh: "夜市", area: "台北 · 大同", cat: "Food", place: "寧夏夜市", lat: 25.0560, lng: 121.5153, radius: 300, clue: "Walk the whole market once before choosing. Try one thing you can't name yet, then ask the vendor what it is.", phraseZh: "這是什麼？", phrasePy: "zhè shì shénme?", phraseEn: "What is this?", phraseTw: "這是啥物？ (tse sī siánn-mih?)" },
+  { order: 6, ink: "st-red", titleZh: "九份芋圓", titleEn: "Taro Balls in Jiufen", stampZh: "九份", area: "新北 · 瑞芳", cat: "Day trip", place: "阿柑姨芋圓", lat: 25.1092, lng: 121.8443, radius: 600, clue: "Take the bus up to the old gold-mining town. Find a taro ball shop with a view of the sea and eat them hot or iced.", phraseZh: "我要冰的", phrasePy: "wǒ yào bīng de", phraseEn: "I'll have it iced", phraseTw: "" }
+];
+async function createTrip() {
+  const st = $("#create-status"); st.className = "status"; st.textContent = "建立中…";
+  try {
+    const id = randomId(24), b = writeBatch(fs);
+    EXAMPLES.forEach((q, i) => b.set(doc(fs, "trips", id, "quests", "ex" + (i + 1)), { ...q, example: true, secret: PH, secretPhoto: null }));
+    await b.commit();
+    location.href = location.pathname + "?trip=" + id + "&role=guide";
+  } catch (err) { st.className = "status err"; st.textContent = "建立失敗：" + (err?.code || err?.message) + "。請確認 Firestore 規則和匿名登入都設定好了。"; }
+}
+
+/* ---------- events ---------- */
+document.addEventListener("click", async e => {
+  const t = e.target.closest("button, a"); if (!t) return;
+  if (t.matches("nav.tabs button")) { view = t.dataset.v; store.set("tsp-view", view); render(); window.scrollTo(0, 0); return; }
+  if (t.id === "create") return createTrip();
+  if (t.dataset.q) return openQuest(t.dataset.q);
+  if (t.hasAttribute("data-close")) return $("#sheet").close();
+  if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); return q && speak(q.phraseZh); }
+  if (t.hasAttribute("data-where")) {
+    const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中…";
+    try { const p = await locate(), d = haversine(p.latitude, p.longitude, q.lat, q.lng); w.className = "gps " + (d <= (q.radius || 300) ? "ok" : "far"); w.textContent = d <= (q.radius || 300) ? `你到了！可以打卡了 · You're here (${fmtDist(d)})` : `還有 ${fmtDist(d)} · ${fmtDist(d)} to go`; }
+    catch (_) { w.className = "gps far"; w.textContent = "抓不到定位，請允許瀏覽器使用位置。"; }
+    return;
+  }
+  if (t.id === "ci-override") return doCheckin(true);
+  if (t.hasAttribute("data-uncheck")) {
+    if (t.dataset.armed) { await deleteDoc(doc(fs, "trips", tripId, "checkins", openQuestId)).catch(() => {}); return; }
+    t.dataset.armed = "1"; t.textContent = "再按一次確認撤銷 Tap again to confirm"; return;
+  }
+  if (t.dataset.copy) {
+    const el = $("#" + t.dataset.copy);
+    try { await navigator.clipboard.writeText(el.textContent); t.textContent = "已複製 Copied"; }
+    catch (_) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); t.textContent = "已選取，請手動複製"; }
+    return;
+  }
+  if (t.dataset.edit !== undefined) return openEditor(t.dataset.edit);
+  if (t.dataset.del) {
+    if (pendingDelete !== t.dataset.del) { pendingDelete = t.dataset.del; t.textContent = "再按一次確認刪除"; return; }
+    await deleteDoc(doc(fs, "trips", tripId, "quests", t.dataset.del)).catch(() => {}); pendingDelete = null; $("#sheet").close(); return;
+  }
+  if (t.dataset.sticker) { const ta = $("#note-text"); ta.value = (ta.value ? ta.value + " " : "") + t.dataset.sticker; ta.focus(); return; }
+  if (t.id === "note-send") {
+    const ta = $("#note-text"), st = $("#note-status"), text = ta.value.trim(), name = $("#note-name").value.trim();
+    if (!text) return;
+    store.set("tsp-name", name);
+    t.disabled = true; st.className = "status"; st.textContent = "";
+    try { await addDoc(collection(fs, "trips", tripId, "notes"), { name, dev: device, text, at: Date.now() }); ta.value = ""; }
+    catch (err) { st.className = "status err"; st.textContent = "沒送出：" + (err?.code || "error"); }
+    t.disabled = false;
+  }
+});
+document.addEventListener("submit", e => { if (e.target.id === "checkin") { e.preventDefault(); doCheckin(false); } });
+$("#sheet").addEventListener("click", e => { if (e.target === $("#sheet")) $("#sheet").close(); });
+$("#sheet").addEventListener("close", () => { openQuestId = null; pendingDelete = null; });
+
+/* ---------- boot ---------- */
+render();
+if (configured) {
+  const app = initializeApp(firebaseConfig);
+  fs = getFirestore(app);
+  const auth = getAuth(app);
+  signInAnonymously(auth).catch(err => { failed = "無法登入 Firebase（請在 Firebase 開啟匿名登入 Anonymous）。" + (err?.code || ""); render(); });
+  onAuthStateChanged(auth, u => {
+    if (!u || !tripId) { render(); return; }
+    store.set("tsp-last", location.pathname + location.search);
+    const onErr = err => { failed = "讀不到這本護照，連結可能不完整，或 Firestore 規則沒設定好。(" + (err?.code || "") + ")"; ready = false; render(); };
+    let gotQ = false, gotC = false;
+    onSnapshot(collection(fs, "trips", tripId, "quests"), s => {
+      quests = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));
+      gotQ = true; ready = gotQ && gotC; render();
+    }, onErr);
+    onSnapshot(collection(fs, "trips", tripId, "checkins"), s => {
+      const prev = checkins; checkins = {}; s.docs.forEach(d => { checkins[d.id] = d.data(); });
+      const added = Object.keys(checkins).find(k => !prev[k]); if (gotC && added) fresh = added;
+      gotC = true; ready = gotQ && gotC; render();
+    }, onErr);
+    onSnapshot(query(collection(fs, "trips", tripId, "notes"), orderBy("at", "desc"), limit(80)), s => {
+      notes = s.docs.map(d => d.data()); if (view === "notes") paintNotes();
+    }, () => {});
+  });
+}
+</script>
+</body>
+</html>

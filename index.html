@@ -289,17 +289,17 @@ function renderHeader() {
 
 function renderSetup() {
   if (!configured) return `<div class="hero-setup"><h2>還差一步 · Almost there</h2>
-    <p class="lead">這個檔案還沒有連上 Firebase。打開 <code>index.html</code>，把 Firebase 給你的設定貼到最上面的 <code>firebaseConfig</code>，再重新上傳到 GitHub。</p></div>`;
+    <p class="lead">這個檔案還沒有連上 Firebase。打開 <code>index.html</code>，把 Firebase 給你的設定貼到最上面的 <code>firebaseConfig</code>，再重新上傳到 GitHub。<br>This file isn't connected to Firebase yet. Paste your Firebase config into <code>firebaseConfig</code> at the top of <code>index.html</code> and upload it to GitHub again.</p></div>`;
   const last = store.get("tsp-last");
   return `<div class="hero-setup"><h2>開一本新護照 <small>New passport</small></h2>
-    <ol><li>按下面的按鈕建立你們的護照（會先放 6 個範例任務）。</li><li>你會拿到兩個連結：出題者用的、旅人用的。</li><li>把「旅人連結」傳給對方，自己留著「出題者連結」。</li></ol>
-    <div class="row"><button class="btn primary" id="create">建立我們的護照</button>${last ? `<a class="btn" href="${esc(last)}">回到上次的護照</a>` : ""}</div>
+    <ol><li>按下面的按鈕建立你們的護照（會先放 6 個範例任務）。<br><span class="hint">Tap the button below to create your passport. It starts with 6 example quests.</span></li><li>你會拿到兩個連結：出題者用的、旅人用的。<br><span class="hint">You'll get two links: one for the guide, one for the traveler.</span></li><li>把「旅人連結」傳給對方，自己留著「出題者連結」。<br><span class="hint">Send the traveler link to your partner. Keep the guide link for yourself.</span></li></ol>
+    <div class="row"><button class="btn primary" id="create">建立我們的護照 · Create our passport</button>${last ? `<a class="btn" href="${esc(last)}">回到上次的護照 · Open my last passport</a>` : ""}</div>
     <div class="status" id="create-status"></div></div>`;
 }
 
 function renderPassport() {
   if (!ready) return `<div class="notice">${failed ? esc(failed) : "正在打開護照… Opening your passport…"}</div>`;
-  if (!quests.length) return `<div class="notice"><b>還沒有任務 · No quests yet.</b><br>${isGuide ? "到「出題 Guide」分頁新增第一個地點。" : "Your guide is still hiding the first stamps. Check back soon."}</div>`;
+  if (!quests.length) return `<div class="notice"><b>還沒有任務 · No quests yet.</b><br>${isGuide ? "到「出題 Guide」分頁新增第一個地點。Add your first place in the Guide tab." : "出題者還在藏第一個印章，等等再回來看。Your guide is still hiding the first stamps. Check back soon."}</div>`;
   const slots = quests.map((q, i) => {
     const c = checkins[q.id];
     return `<button class="slot ${c ? "done" : ""} ${fresh === q.id ? "fresh" : ""}" data-q="${esc(q.id)}" aria-label="${esc(q.titleEn || q.titleZh)}${c ? " — collected" : ""}">
@@ -313,7 +313,11 @@ function renderPassport() {
       <span class="chip ${c ? "ok" : q.example ? "ex" : ""}">${c ? "集到了" : q.example ? "範例" : esc(q.cat || "Quest")}</span></button>`;
   }).join("");
   return `<section class="stack"><h2>簽證頁 <small>Stamp page</small></h2><div class="visa">${slots}</div></section>
-    <section class="stack"><h2>任務 <small>Quests</small></h2><p class="lead">Tap a quest, go there, learn the phrase, then check in on the spot. Your phone's GPS confirms you're there and the stamp unlocks a hidden message.</p><div class="quests">${list}</div></section>`;
+    <section class="stack"><h2>任務 <small>Quests</small></h2><div class="notice"><b>怎麼玩 · How to play</b><ol style="margin:6px 0 0;padding-left:20px;display:grid;gap:6px">
+      <li>點一個任務，看提示，用 Google Maps 走過去。<br><span class="hint">Tap a quest, read the clue, and use Google Maps to get there.</span></li>
+      <li>按「聽發音」，在現場試著說說看那句中文。<br><span class="hint">Tap "Listen" and try saying the phrase out loud at the spot.</span></li>
+      <li>到了之後拍一張照，按「蓋章！」。手機會用 GPS 確認你真的在那裡。<br><span class="hint">When you arrive, take a photo and tap "Stamp it". Your phone's GPS checks that you're really there.</span></li>
+      <li>蓋到章就會解鎖一段秘密訊息。<br><span class="hint">Each stamp unlocks a hidden message.</span></li></ol></div><div class="quests">${list}</div></section>`;
 }
 
 function myName() { return store.get("tsp-name") || ""; }
@@ -329,7 +333,7 @@ function renderNotes() {
 function paintNotes() {
   const host = $("#notes-list"); if (!host) return;
   host.textContent = "";
-  if (!notes.length) { host.innerHTML = `<div class="notice">還沒有留言。Leave the first note — it shows up on both phones.</div>`; return; }
+  if (!notes.length) { host.innerHTML = `<div class="notice">還沒有留言，留下第一則吧，兩支手機都看得到。No notes yet. Leave the first note — it shows up on both phones.</div>`; return; }
   for (const n of notes) {
     const mine = n.dev === device;
     const el = document.createElement("div");
@@ -353,20 +357,20 @@ function renderGuide() {
   const done = quests.filter(q => checkins[q.id]).sort((a, b) => checkins[b.id].at - checkins[a.id].at);
   const feed = done.map(q => {
     const c = checkins[q.id];
-    const g = c.dist != null ? `<span class="gps ok">📍 距離地點 ${fmtDist(c.dist)}</span>` : `<span class="gps far">📍 沒有用 GPS 驗證</span>`;
+    const g = c.dist != null ? `<span class="gps ok">📍 距離地點 ${fmtDist(c.dist)} · ${fmtDist(c.dist)} from the spot</span>` : `<span class="gps far">📍 沒有用 GPS 驗證 · Not GPS-verified</span>`;
     return `<div class="feed-item">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<div class="ph">no photo</div>`}
       <div><b>${esc(q.titleZh)}</b> <time>${fmtTime(c.at)}</time><br>${g}<p class="hint" data-note="${esc(q.id)}" style="margin-top:4px"></p></div></div>`;
   }).join("");
   const admin = quests.map((q, i) => `<div class="qadmin"><div><b>${String(i + 1).padStart(2, "0")} ${esc(q.titleZh)}</b> <span class="hint">${esc(q.titleEn)}</span> ${q.example ? `<span class="chip ex">範例</span>` : ""} ${q.lat != null ? "" : `<span class="chip">無 GPS</span>`}</div>
-      <button class="btn" data-edit="${esc(q.id)}">編輯</button></div>`).join("");
+      <button class="btn" data-edit="${esc(q.id)}">編輯 Edit</button></div>`).join("");
   return `<section class="stack"><h2>分享連結 <small>Links</small></h2><div class="links">
-      <div class="link-box"><b>旅人連結 · 傳給對方</b><code id="lk-t"></code><div class="row"><button class="btn primary" data-copy="lk-t">複製</button></div></div>
-      <div class="link-box"><b>出題者連結 · 你自己留著，不要傳出去</b><code id="lk-g"></code><div class="row"><button class="btn" data-copy="lk-g">複製</button></div></div></div>
-      <p class="hint">知道連結的人就能打開這本護照，請只傳給對方。</p></section>
-    <section class="stack"><h2>打卡動態 <small>Live check-ins</small></h2>${feed ? `<div class="feed">${feed}</div>` : `<div class="notice">對方還沒打卡。打卡後照片會即時出現在這裡。</div>`}</section>
+      <div class="link-box"><b>旅人連結 · 傳給對方<br><span class="hint">Traveler link · send this to your partner</span></b><code id="lk-t"></code><div class="row"><button class="btn primary" data-copy="lk-t">複製 Copy</button></div></div>
+      <div class="link-box"><b>出題者連結 · 你自己留著，不要傳出去<br><span class="hint">Guide link · keep this one for yourself</span></b><code id="lk-g"></code><div class="row"><button class="btn" data-copy="lk-g">複製 Copy</button></div></div></div>
+      <p class="hint">知道連結的人就能打開這本護照，請只傳給對方。<br>Anyone with a link can open this passport, so only share it with your partner.</p></section>
+    <section class="stack"><h2>打卡動態 <small>Live check-ins</small></h2>${feed ? `<div class="feed">${feed}</div>` : `<div class="notice">對方還沒打卡。打卡後照片會即時出現在這裡。<br>No check-ins yet. Photos will show up here as soon as your partner checks in.</div>`}</section>
     <section class="stack"><h2>任務設定 <small>Your quests</small></h2>
-    <p class="lead">秘密訊息要在那個地點打卡後才會出現。標「範例」的任務是先放的示範，請改成你們自己的內容或刪掉。</p>
-    <div>${admin}</div><div class="row"><button class="btn primary" data-edit="">＋ 新增地點</button></div></section>`;
+    <p class="lead">秘密訊息要在那個地點打卡後才會出現。標「範例」的任務是先放的示範，請改成你們自己的內容或刪掉。<br><span class="hint">Hidden messages appear only after a check-in at that place. Quests marked 範例 are examples: edit them or delete them.</span></p>
+    <div>${admin}</div><div class="row"><button class="btn primary" data-edit="">＋ 新增地點 · Add a place</button></div></section>`;
 }
 
 function render() {
@@ -413,7 +417,7 @@ function renderSheet() {
           <label class="f">一句話 · A line about it (optional)<textarea id="ci-note" maxlength="400" placeholder="What did you try? 你點了什麼？"></textarea></label>
           <button class="btn ink" type="submit">蓋章！ Stamp it</button><div class="status" id="ci-status"></div>
           <button class="btn" type="button" id="ci-override" hidden>GPS 不準，我確定我在這裡 · I'm really here</button></form>`}`;
-  if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）"; }
+  if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）Your guide hasn't written a message here yet."; }
 }
 async function shrinkToDataURL(file, max = 1024) {
   const bmp = await createImageBitmap(file);
@@ -460,24 +464,24 @@ function speak(text) {
 }
 
 /* ---------- guide editor ---------- */
-const FIELDS = [["titleZh", "地點名稱（中文）"], ["titleEn", "Place name (English)"], ["stampZh", "印章上的字（2–4 字）"], ["area", "區域 e.g. 台北 · 大稻埕"], ["cat", "類型 e.g. Food / View / Temple"], ["place", "Google Maps 搜尋字"]];
+const FIELDS = [["titleZh", "地點名稱（中文）Place name in Chinese"], ["titleEn", "Place name (English)"], ["stampZh", "印章上的字（2–4 字）Stamp text, 2–4 characters"], ["area", "區域 Area, e.g. 台北 · 大稻埕"], ["cat", "類型 Type, e.g. Food / View / Temple"], ["place", "Google Maps 搜尋字 Search term"]];
 const TEXTS = ["clue", "phraseZh", "phrasePy", "phraseEn", "phraseTw", "secret"];
 let pendingDelete = null;
 function openEditor(id) {
   openQuestId = null;
   const q = quests.find(x => x.id === id) || { id: "", order: quests.length ? Math.max(...quests.map(x => x.order || 0)) + 1 : 1 };
   const body = $("#sheet-body"); body.style.removeProperty("--ink");
-  body.innerHTML = `<div class="sheet-head"><div><span class="chip">出題 Guide</span><h3>${q.id ? "編輯任務" : "新增任務"}</h3></div><button class="x" data-close aria-label="Close">×</button></div>
+  body.innerHTML = `<div class="sheet-head"><div><span class="chip">出題 Guide</span><h3>${q.id ? "編輯任務 Edit quest" : "新增任務 New quest"}</h3></div><button class="x" data-close aria-label="Close">×</button></div>
     <form class="stack" id="editor"><div class="grid2">${FIELDS.map(([k, l]) => `<label class="f">${l}<input id="e-${k}"></label>`).join("")}</div>
-    <div class="grid2"><label class="f">GPS 座標（緯度, 經度）<input id="e-coords" inputmode="decimal" placeholder="25.0330, 121.5297"></label>
-    <label class="f">打卡範圍（公尺）<input id="e-radius" type="number" inputmode="numeric" placeholder="300"></label></div>
-    <div class="row"><button class="btn" type="button" id="e-here">用我現在的位置</button></div>
-    <p class="hint">在 Google Maps 長按地點，最上面會出現座標，點一下複製再貼過來。不填座標的話，這關不檢查 GPS。</p>
+    <div class="grid2"><label class="f">GPS 座標（緯度, 經度）Coordinates (lat, lng)<input id="e-coords" inputmode="decimal" placeholder="25.0330, 121.5297"></label>
+    <label class="f">打卡範圍（公尺）Check-in radius (m)<input id="e-radius" type="number" inputmode="numeric" placeholder="300"></label></div>
+    <div class="row"><button class="btn" type="button" id="e-here">用我現在的位置 · Use my location</button></div>
+    <p class="hint">在 Google Maps 長按地點，最上面會出現座標，點一下複製再貼過來。不填座標的話，這關不檢查 GPS。<br>In Google Maps, long-press a spot and tap the coordinates at the top to copy them. Leave this empty to skip the GPS check.</p>
     <label class="f">提示 / 任務說明 Clue<textarea id="e-clue"></textarea></label>
-    <div class="grid2"><label class="f">要學的一句中文<input id="e-phraseZh"></label><label class="f">拼音 Pinyin<input id="e-phrasePy"></label>
-    <label class="f">English meaning<input id="e-phraseEn"></label><label class="f">台語（可不填）<input id="e-phraseTw"></label></div>
-    <label class="f">秘密訊息（打卡後才看得到）<textarea id="e-secret" placeholder="只有你們懂的那段回憶…"></textarea></label>
-    <label class="f">秘密照片（可不填）<input type="file" id="e-photo" accept="image/*"></label>
+    <div class="grid2"><label class="f">要學的一句中文 Phrase to learn<input id="e-phraseZh"></label><label class="f">拼音 Pinyin<input id="e-phrasePy"></label>
+    <label class="f">English meaning<input id="e-phraseEn"></label><label class="f">台語（可不填）Taiwanese, optional<input id="e-phraseTw"></label></div>
+    <label class="f">秘密訊息（打卡後才看得到）Hidden message, shown after check-in<textarea id="e-secret" placeholder="只有你們懂的那段回憶…"></textarea></label>
+    <label class="f">秘密照片（可不填）Hidden photo, optional<input type="file" id="e-photo" accept="image/*"></label>
     ${q.secretPhoto ? `<img class="photo" src="${esc(q.secretPhoto)}" alt="">` : ""}
     <div class="grid2"><label class="f">順序 Order<input id="e-order" type="number" inputmode="numeric"></label>
     <label class="f">印章顏色 Ink<select id="e-ink">${INKS.map(k => `<option value="${k}">${INK_NAMES[k]}</option>`).join("")}</select></label></div>
@@ -487,25 +491,25 @@ function openEditor(id) {
   $("#e-coords").value = q.lat != null ? `${q.lat}, ${q.lng}` : "";
   $("#e-ink").value = q.id ? inkOf(q) : INKS[quests.length % INKS.length];
   $("#e-here").onclick = async () => {
-    const st = $("#e-status"); st.className = "status"; st.textContent = "定位中…";
-    try { const p = await locate(); $("#e-coords").value = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`; st.textContent = `已填入（誤差約 ${Math.round(p.accuracy)} m）`; }
-    catch (e) { st.className = "status err"; st.textContent = "抓不到定位，請允許瀏覽器使用位置。"; }
+    const st = $("#e-status"); st.className = "status"; st.textContent = "定位中… Locating…";
+    try { const p = await locate(); $("#e-coords").value = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`; st.textContent = `已填入（誤差約 ${Math.round(p.accuracy)} m）Filled in (±${Math.round(p.accuracy)} m)`; }
+    catch (e) { st.className = "status err"; st.textContent = "抓不到定位，請允許瀏覽器使用位置。Couldn't get your location. Allow location access and try again."; }
   };
   $("#editor").onsubmit = async ev => {
-    ev.preventDefault(); const st = $("#e-status"); st.className = "status"; st.textContent = "儲存中…";
+    ev.preventDefault(); const st = $("#e-status"); st.className = "status"; st.textContent = "儲存中… Saving…";
     try {
       const id = q.id || "q" + Date.now().toString(36);
       const data = { order: Number($("#e-order").value) || 0, ink: $("#e-ink").value, example: false, secretPhoto: q.secretPhoto || null };
       for (const k of [...FIELDS.map(f => f[0]), ...TEXTS]) data[k] = $("#e-" + k).value.trim();
-      if (!data.titleZh && !data.titleEn) { st.className = "status err"; st.textContent = "至少填一個地點名稱。"; return; }
+      if (!data.titleZh && !data.titleEn) { st.className = "status err"; st.textContent = "至少填一個地點名稱。Enter at least one place name."; return; }
       const raw = $("#e-coords").value.trim(), co = parseCoords(raw);
-      if (raw && !co) { st.className = "status err"; st.textContent = "座標格式看不懂，請用「25.0330, 121.5297」這種格式。"; return; }
+      if (raw && !co) { st.className = "status err"; st.textContent = "座標格式看不懂，請用「25.0330, 121.5297」這種格式。Use the format 25.0330, 121.5297."; return; }
       data.lat = co ? co.lat : null; data.lng = co ? co.lng : null;
       data.radius = Number($("#e-radius").value) || 300;
       const f = $("#e-photo").files[0]; if (f) data.secretPhoto = await shrinkToDataURL(f);
       await setDoc(doc(fs, "trips", tripId, "quests", id), data);
       $("#sheet").close();
-    } catch (err) { st.className = "status err"; st.textContent = "沒有存成功：" + (err?.code || err?.message || "error"); }
+    } catch (err) { st.className = "status err"; st.textContent = "沒有存成功 Didn't save: " + (err?.code || err?.message || "error"); }
   };
   if (!$("#sheet").open) $("#sheet").showModal();
 }
@@ -521,13 +525,13 @@ const EXAMPLES = [
   { order: 6, ink: "st-red", titleZh: "九份芋圓", titleEn: "Taro Balls in Jiufen", stampZh: "九份", area: "新北 · 瑞芳", cat: "Day trip", place: "阿柑姨芋圓", lat: 25.1092, lng: 121.8443, radius: 600, clue: "Take the bus up to the old gold-mining town. Find a taro ball shop with a view of the sea and eat them hot or iced.", phraseZh: "我要冰的", phrasePy: "wǒ yào bīng de", phraseEn: "I'll have it iced", phraseTw: "" }
 ];
 async function createTrip() {
-  const st = $("#create-status"); st.className = "status"; st.textContent = "建立中…";
+  const st = $("#create-status"); st.className = "status"; st.textContent = "建立中… Creating…";
   try {
     const id = randomId(24), b = writeBatch(fs);
     EXAMPLES.forEach((q, i) => b.set(doc(fs, "trips", id, "quests", "ex" + (i + 1)), { ...q, example: true, secret: PH, secretPhoto: null }));
     await b.commit();
     location.href = location.pathname + "?trip=" + id + "&role=guide";
-  } catch (err) { st.className = "status err"; st.textContent = "建立失敗：" + (err?.code || err?.message) + "。請確認 Firestore 規則和匿名登入都設定好了。"; }
+  } catch (err) { st.className = "status err"; st.textContent = "建立失敗 Couldn't create: " + (err?.code || err?.message) + "。請確認 Firestore 規則和匿名登入都設定好了。Check the Firestore rules and Anonymous sign-in."; }
 }
 
 /* ---------- events ---------- */
@@ -539,9 +543,9 @@ document.addEventListener("click", async e => {
   if (t.hasAttribute("data-close")) return $("#sheet").close();
   if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); return q && speak(q.phraseZh); }
   if (t.hasAttribute("data-where")) {
-    const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中…";
+    const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中… Locating…";
     try { const p = await locate(), d = haversine(p.latitude, p.longitude, q.lat, q.lng); w.className = "gps " + (d <= (q.radius || 300) ? "ok" : "far"); w.textContent = d <= (q.radius || 300) ? `你到了！可以打卡了 · You're here (${fmtDist(d)})` : `還有 ${fmtDist(d)} · ${fmtDist(d)} to go`; }
-    catch (_) { w.className = "gps far"; w.textContent = "抓不到定位，請允許瀏覽器使用位置。"; }
+    catch (_) { w.className = "gps far"; w.textContent = "抓不到定位，請允許瀏覽器使用位置。Couldn't get your location. Allow location access."; }
     return;
   }
   if (t.id === "ci-override") return doCheckin(true);
@@ -552,12 +556,12 @@ document.addEventListener("click", async e => {
   if (t.dataset.copy) {
     const el = $("#" + t.dataset.copy);
     try { await navigator.clipboard.writeText(el.textContent); t.textContent = "已複製 Copied"; }
-    catch (_) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); t.textContent = "已選取，請手動複製"; }
+    catch (_) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); t.textContent = "已選取，請手動複製 Selected, copy it manually"; }
     return;
   }
   if (t.dataset.edit !== undefined) return openEditor(t.dataset.edit);
   if (t.dataset.del) {
-    if (pendingDelete !== t.dataset.del) { pendingDelete = t.dataset.del; t.textContent = "再按一次確認刪除"; return; }
+    if (pendingDelete !== t.dataset.del) { pendingDelete = t.dataset.del; t.textContent = "再按一次確認刪除 Tap again to delete"; return; }
     await deleteDoc(doc(fs, "trips", tripId, "quests", t.dataset.del)).catch(() => {}); pendingDelete = null; $("#sheet").close(); return;
   }
   if (t.dataset.sticker) { const ta = $("#note-text"); ta.value = (ta.value ? ta.value + " " : "") + t.dataset.sticker; ta.focus(); return; }
@@ -567,7 +571,7 @@ document.addEventListener("click", async e => {
     store.set("tsp-name", name);
     t.disabled = true; st.className = "status"; st.textContent = "";
     try { await addDoc(collection(fs, "trips", tripId, "notes"), { name, dev: device, text, at: Date.now() }); ta.value = ""; }
-    catch (err) { st.className = "status err"; st.textContent = "沒送出：" + (err?.code || "error"); }
+    catch (err) { st.className = "status err"; st.textContent = "沒送出 Not sent: " + (err?.code || "error"); }
     t.disabled = false;
   }
 });
@@ -581,11 +585,11 @@ if (configured) {
   const app = initializeApp(firebaseConfig);
   fs = getFirestore(app);
   const auth = getAuth(app);
-  signInAnonymously(auth).catch(err => { failed = "無法登入 Firebase（請在 Firebase 開啟匿名登入 Anonymous）。" + (err?.code || ""); render(); });
+  signInAnonymously(auth).catch(err => { failed = "無法登入 Firebase（請在 Firebase 開啟匿名登入 Anonymous）。Couldn't sign in to Firebase. Turn on Anonymous sign-in. " + (err?.code || ""); render(); });
   onAuthStateChanged(auth, u => {
     if (!u || !tripId) { render(); return; }
     store.set("tsp-last", location.pathname + location.search);
-    const onErr = err => { failed = "讀不到這本護照，連結可能不完整，或 Firestore 規則沒設定好。(" + (err?.code || "") + ")"; ready = false; render(); };
+    const onErr = err => { failed = "讀不到這本護照，連結可能不完整，或 Firestore 規則沒設定好。Couldn't open this passport. The link may be incomplete. (" + (err?.code || "") + ")"; ready = false; render(); };
     let gotQ = false, gotC = false;
     onSnapshot(collection(fs, "trips", tripId, "quests"), s => {
       quests = s.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.order || 0) - (b.order || 0));

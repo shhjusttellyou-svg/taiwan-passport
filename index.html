@@ -440,7 +440,7 @@ function renderSheet() {
     ${q.phraseZh ? `<div class="phrase"><span class="tag">Say it here · 這裡用得到</span><span class="zh">${esc(q.phraseZh)}</span>
       ${q.phrasePy ? `<span class="py">${esc(q.phrasePy)}</span>` : ""}<span>${esc(q.phraseEn || "")}</span>
       ${q.phraseTw ? `<span class="tw">台語 Taiwanese: ${esc(q.phraseTw)}</span>` : ""}
-      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button>${q.phraseAudio ? `<span class="hint" style="align-self:center">出題者的錄音 · Recorded by your guide</span>` : ""}</div><span class="hint" id="speak-status" hidden></span><label class="f" id="voice-pick" hidden>聲音聽起來怪怪的？換一個 · Voice sounds odd? Pick another<select id="voice-select"></select></label></div>` : ""}
+      ${q.phraseAudio ? `<div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div><span class="hint" id="speak-status" hidden></span>` : ""}</div>` : ""}
     <div class="row"><a class="btn" href="${esc(maps)}" target="_blank" rel="noopener">📍 Google Maps</a>${q.lat != null && !c ? `<button class="btn" data-where>我離這裡多遠？ How far?</button>` : ""}</div>
     <div class="gps" id="where"></div>
     ${c ? `<div class="stack"><span class="chip ok" style="justify-self:start">集到了 · Collected ${fmtDate(c.at)}</span>
@@ -453,7 +453,6 @@ function renderSheet() {
           <label class="f">一句話 · A line about it (optional)<textarea id="ci-note" maxlength="400" placeholder="What did you try? 你點了什麼？"></textarea></label>
           <button class="btn ink" type="submit">蓋章！ Stamp it</button><div class="status" id="ci-status"></div>
           <button class="btn" type="button" id="ci-override" hidden>GPS 不準，我確定我在這裡 · I'm really here</button></form>`}`;
-  if (!q.phraseAudio) fillVoices();
   if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）Your guide hasn't written a message here yet."; }
 }
 async function shrinkToDataURL(file, max = 1024) {
@@ -496,56 +495,10 @@ async function doCheckin(override) {
     btn.disabled = false;
   } finally { busy = false; }
 }
-// Voices load asynchronously on most browsers; keep the list fresh.
-let voices = [];
-function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) { voices = []; } }
-if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.addEventListener?.("voiceschanged", loadVoices); }
-// iOS and macOS also list novelty voices (Eddy, Flo, Grandma, Rocko…) under zh-TW; they sound robotic, so rank them last.
-const NOVELTY = /eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|eloquence|bells|bubbles|jester|organ|superstar|trinoids|whisper|zarvox|bad news|good news|boing|cellos|wobble|albert|fred|junior|kathy|ralph/i;
-const zhVoices = () => { if (!voices.length) loadVoices(); return voices.filter(v => /^(zh|cmn)/i.test(v.lang) && !/HK|yue/i.test(v.lang)); };
-function voiceScore(v) {
-  let n = 0;
-  if (/TW|Hant/i.test(v.lang)) n += 100;
-  if (/meijia|美佳|hanhan|yating|zhiwei|hsiaochen|hsiaoyu|google/i.test(v.name)) n += 50;
-  if (/premium|enhanced|natural|neural|高品質|優化/i.test(v.name)) n += 30;
-  if (NOVELTY.test(v.name)) n -= 200;
-  if (v.localService) n += 5;
-  return n;
-}
-function pickVoice() {
-  const zh = zhVoices();
-  const saved = store.get("tsp-voice");
-  return zh.find(v => v.voiceURI === saved || v.name === saved) || [...zh].sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
-}
 function blobToDataURL(b) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); }); }
 let player = null;
 function playAudio(url, onFail) {
   try { player?.pause(); player = new Audio(url); player.play().catch(() => onFail?.()); } catch (e) { onFail?.(); }
-}
-function fillVoices() {
-  const sel = $("#voice-select"), wrap = $("#voice-pick"); if (!sel) return;
-  const zh = [...zhVoices()].sort((a, b) => voiceScore(b) - voiceScore(a));
-  if (zh.length < 2) { wrap.hidden = true; return; }
-  const cur = pickVoice();
-  sel.textContent = "";
-  for (const v of zh) { const o = document.createElement("option"); o.value = v.voiceURI || v.name; o.textContent = `${v.name} (${v.lang})`; if (v === cur) o.selected = true; sel.appendChild(o); }
-  wrap.hidden = false;
-  sel.onchange = () => { store.set("tsp-voice", sel.value); const q = quests.find(x => x.id === openQuestId); if (q) speak(q.phraseZh); };
-}
-if ("speechSynthesis" in window) speechSynthesis.addEventListener?.("voiceschanged", () => fillVoices());
-function speak(text, btn) {
-  const say = (zh, en) => { const w = $("#speak-status"); if (w) { w.textContent = zh + " " + en; w.hidden = false; } };
-  if (!("speechSynthesis" in window)) return say("這個瀏覽器不支援語音。", "This browser can't read text aloud.");
-  const voice = pickVoice();
-  if (!voice && voices.length) return say("這支手機沒有安裝中文語音。可以到「設定 → 輔助使用 → 朗讀內容 → 聲音 → 中文」下載。", "No Chinese voice on this device. Download one in Settings → Accessibility → Spoken Content → Voices → Chinese.");
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = voice ? voice.lang : "zh-TW"; if (voice) u.voice = voice; u.rate = .8;
-  u.onerror = e => say("播放失敗，請確認手機沒有靜音、音量有開。", "Couldn't play. Check that your phone isn't muted.");
-  // Safari drops an utterance queued right after cancel(), so only cancel when something is playing.
-  if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(() => speechSynthesis.speak(u), 120); }
-  else speechSynthesis.speak(u);
-  try { speechSynthesis.resume(); } catch (e) {}
-  if (btn) { btn.disabled = true; setTimeout(() => { btn.disabled = false; }, 800); }
 }
 
 /* ---------- guide editor ---------- */
@@ -566,7 +519,7 @@ function openEditor(id) {
     <div class="grid2"><label class="f">要學的一句中文 Phrase to learn<input id="e-phraseZh"></label><label class="f">拼音 Pinyin<input id="e-phrasePy"></label>
     <label class="f">English meaning<input id="e-phraseEn"></label><label class="f">台語（可不填）Taiwanese, optional<input id="e-phraseTw"></label></div>
     <div class="rec-box"><b>你的發音錄音 · Your voice recording</b>
-      <p class="hint">按「錄音」唸一次上面那句中文（最多 10 秒）。對方按「聽發音」時會聽到你的聲音。<br>Record yourself saying the phrase (up to 10 seconds). Your partner hears it when they tap "Listen".</p>
+      <p class="hint">按「錄音」唸一次上面那句中文（最多 10 秒）。對方會看到「聽發音」按鈕，聽到你的聲音。沒錄音的任務不會出現這個按鈕。<br>Record yourself saying the phrase (up to 10 seconds). Your partner gets a "Listen" button that plays it. Quests without a recording have no Listen button.</p>
       <div class="row"><button class="btn ink" type="button" id="rec-start">● 錄音 Record</button><button class="btn" type="button" id="rec-stop" hidden>■ 停止 Stop</button>
       <button class="btn" type="button" id="rec-play" hidden>▶ 試聽 Play</button><button class="btn danger" type="button" id="rec-del" hidden>刪除錄音 Delete</button></div>
       <div class="status" id="rec-status"></div>
@@ -672,8 +625,8 @@ document.addEventListener("click", async e => {
   if (t.dataset.q) return openQuest(t.dataset.q);
   if (t.hasAttribute("data-close")) return $("#sheet").close();
   if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); if (!q) return;
-    if (q.phraseAudio) return playAudio(q.phraseAudio, () => { const w = $("#speak-status"); if (w) { w.hidden = false; w.textContent = "錄音播放失敗，改用手機語音。Couldn't play the recording, using the phone voice instead."; } speak(q.phraseZh, t); });
-    return speak(q.phraseZh, t); }
+    if (q.phraseAudio) playAudio(q.phraseAudio, () => { const w = $("#speak-status"); if (w) { w.hidden = false; w.textContent = "錄音播放失敗，請確認音量有開。Couldn't play the recording. Check your volume."; } });
+    return; }
   if (t.hasAttribute("data-where")) {
     const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中… Locating…";
     try { const p = await locate(), d = haversine(p.latitude, p.longitude, q.lat, q.lng); w.className = "gps " + (d <= (q.radius || 300) ? "ok" : "far"); w.textContent = d <= (q.radius || 300) ? `你到了！可以打卡了 · You're here (${fmtDist(d)})` : `還有 ${fmtDist(d)} · ${fmtDist(d)} to go`; }

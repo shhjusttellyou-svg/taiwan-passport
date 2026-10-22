@@ -152,6 +152,8 @@ textarea { resize: vertical; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) { .slot.fresh svg { animation: none; } .bar i { transition: none; } }
 
 .links { display: grid; gap: 10px; }
+.rec-box { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.rec-box .hint { margin: 0; }
 .script-toggle { margin-left: auto; align-self: flex-start; flex: none; background: none; border: 1px solid color-mix(in srgb, var(--gold) 60%, transparent); color: var(--cover-fg); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
 .script-toggle b { color: var(--gold); }
 .link-box { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
@@ -395,7 +397,7 @@ function renderGuide() {
     return `<div class="feed-item">${c.photo ? `<img src="${esc(c.photo)}" alt="">` : `<div class="ph">no photo</div>`}
       <div><b>${esc(q.titleZh)}</b> <time>${fmtTime(c.at)}</time><br>${g}<p class="hint" data-note="${esc(q.id)}" style="margin-top:4px"></p></div></div>`;
   }).join("");
-  const admin = quests.map((q, i) => `<div class="qadmin"><div><b>${String(i + 1).padStart(2, "0")} ${esc(q.titleZh)}</b> <span class="hint">${esc(q.titleEn)}</span> ${q.example ? `<span class="chip ex">範例</span>` : ""} ${q.lat != null ? "" : `<span class="chip">無 GPS</span>`}</div>
+  const admin = quests.map((q, i) => `<div class="qadmin"><div><b>${String(i + 1).padStart(2, "0")} ${esc(q.titleZh)}</b> <span class="hint">${esc(q.titleEn)}</span> ${q.example ? `<span class="chip ex">範例</span>` : ""} ${q.lat != null ? "" : `<span class="chip">無 GPS</span>`} ${q.phraseAudio ? `<span class="chip ok">🎙 有錄音</span>` : ""}</div>
       <button class="btn" data-edit="${esc(q.id)}">編輯 Edit</button></div>`).join("");
   return `<section class="stack"><h2>分享連結 <small>Links</small></h2><div class="links">
       <div class="link-box"><b>旅人連結 · 傳給對方<br><span class="hint">Traveler link · send this to your partner</span></b><code id="lk-t"></code><div class="row"><button class="btn primary" data-copy="lk-t">複製 Copy</button></div></div>
@@ -438,7 +440,7 @@ function renderSheet() {
     ${q.phraseZh ? `<div class="phrase"><span class="tag">Say it here · 這裡用得到</span><span class="zh">${esc(q.phraseZh)}</span>
       ${q.phrasePy ? `<span class="py">${esc(q.phrasePy)}</span>` : ""}<span>${esc(q.phraseEn || "")}</span>
       ${q.phraseTw ? `<span class="tw">台語 Taiwanese: ${esc(q.phraseTw)}</span>` : ""}
-      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div><span class="hint" id="speak-status" hidden></span><label class="f" id="voice-pick" hidden>聲音聽起來怪怪的？換一個 · Voice sounds odd? Pick another<select id="voice-select"></select></label></div>` : ""}
+      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button>${q.phraseAudio ? `<span class="hint" style="align-self:center">出題者的錄音 · Recorded by your guide</span>` : ""}</div><span class="hint" id="speak-status" hidden></span><label class="f" id="voice-pick" hidden>聲音聽起來怪怪的？換一個 · Voice sounds odd? Pick another<select id="voice-select"></select></label></div>` : ""}
     <div class="row"><a class="btn" href="${esc(maps)}" target="_blank" rel="noopener">📍 Google Maps</a>${q.lat != null && !c ? `<button class="btn" data-where>我離這裡多遠？ How far?</button>` : ""}</div>
     <div class="gps" id="where"></div>
     ${c ? `<div class="stack"><span class="chip ok" style="justify-self:start">集到了 · Collected ${fmtDate(c.at)}</span>
@@ -451,7 +453,7 @@ function renderSheet() {
           <label class="f">一句話 · A line about it (optional)<textarea id="ci-note" maxlength="400" placeholder="What did you try? 你點了什麼？"></textarea></label>
           <button class="btn ink" type="submit">蓋章！ Stamp it</button><div class="status" id="ci-status"></div>
           <button class="btn" type="button" id="ci-override" hidden>GPS 不準，我確定我在這裡 · I'm really here</button></form>`}`;
-  fillVoices();
+  if (!q.phraseAudio) fillVoices();
   if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）Your guide hasn't written a message here yet."; }
 }
 async function shrinkToDataURL(file, max = 1024) {
@@ -515,6 +517,11 @@ function pickVoice() {
   const saved = store.get("tsp-voice");
   return zh.find(v => v.voiceURI === saved || v.name === saved) || [...zh].sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
 }
+function blobToDataURL(b) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(b); }); }
+let player = null;
+function playAudio(url, onFail) {
+  try { player?.pause(); player = new Audio(url); player.play().catch(() => onFail?.()); } catch (e) { onFail?.(); }
+}
 function fillVoices() {
   const sel = $("#voice-select"), wrap = $("#voice-pick"); if (!sel) return;
   const zh = [...zhVoices()].sort((a, b) => voiceScore(b) - voiceScore(a));
@@ -558,6 +565,12 @@ function openEditor(id) {
     <label class="f">提示 / 任務說明 Clue<textarea id="e-clue"></textarea></label>
     <div class="grid2"><label class="f">要學的一句中文 Phrase to learn<input id="e-phraseZh"></label><label class="f">拼音 Pinyin<input id="e-phrasePy"></label>
     <label class="f">English meaning<input id="e-phraseEn"></label><label class="f">台語（可不填）Taiwanese, optional<input id="e-phraseTw"></label></div>
+    <div class="rec-box"><b>你的發音錄音 · Your voice recording</b>
+      <p class="hint">按「錄音」唸一次上面那句中文（最多 10 秒）。對方按「聽發音」時會聽到你的聲音。<br>Record yourself saying the phrase (up to 10 seconds). Your partner hears it when they tap "Listen".</p>
+      <div class="row"><button class="btn ink" type="button" id="rec-start">● 錄音 Record</button><button class="btn" type="button" id="rec-stop" hidden>■ 停止 Stop</button>
+      <button class="btn" type="button" id="rec-play" hidden>▶ 試聽 Play</button><button class="btn danger" type="button" id="rec-del" hidden>刪除錄音 Delete</button></div>
+      <div class="status" id="rec-status"></div>
+      <label class="f">或上傳音檔（例如語音備忘錄）· Or upload an audio file<input type="file" id="rec-file" accept="audio/*"></label></div>
     <label class="f">秘密訊息（打卡後才看得到）Hidden message, shown after check-in<textarea id="e-secret" placeholder="只有你們懂的那段回憶…"></textarea></label>
     <label class="f">秘密照片（可不填）Hidden photo, optional<input type="file" id="e-photo" accept="image/*"></label>
     ${q.secretPhoto ? `<img class="photo" src="${esc(q.secretPhoto)}" alt="">` : ""}
@@ -573,6 +586,42 @@ function openEditor(id) {
     try { const p = await locate(); $("#e-coords").value = `${p.latitude.toFixed(6)}, ${p.longitude.toFixed(6)}`; st.textContent = `已填入（誤差約 ${Math.round(p.accuracy)} m）Filled in (±${Math.round(p.accuracy)} m)`; }
     catch (e) { st.className = "status err"; st.textContent = "抓不到定位，請允許瀏覽器使用位置。Couldn't get your location. Allow location access and try again."; }
   };
+  let recAudio = q.phraseAudio || null, recorder = null, recStream = null, recTimer = null, recStart = 0;
+  const recUI = (msg, err) => {
+    $("#rec-play").hidden = $("#rec-del").hidden = !recAudio;
+    $("#rec-start").textContent = recAudio ? "● 重錄 Re-record" : "● 錄音 Record";
+    const st = $("#rec-status"); st.className = "status" + (err ? " err" : ""); st.textContent = msg ?? (recAudio ? "已錄好 ✓ 按「儲存 Save」才會存進任務。Recorded. Tap Save to keep it." : "");
+  };
+  recUI();
+  $("#rec-start").onclick = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) return recUI("這個瀏覽器不能錄音，請改用上傳音檔。This browser can't record. Upload an audio file instead.", true);
+    try { recStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+    catch (e) { return recUI("沒有麥克風權限，請允許使用麥克風。Microphone access was blocked. Allow it and try again.", true); }
+    const type = ["audio/mp4", "audio/webm;codecs=opus", "audio/webm"].find(t => MediaRecorder.isTypeSupported?.(t));
+    recorder = new MediaRecorder(recStream, type ? { mimeType: type, audioBitsPerSecond: 64000 } : undefined);
+    const chunks = [];
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.onstop = async () => {
+      clearInterval(recTimer); recStream.getTracks().forEach(t => t.stop());
+      $("#rec-start").hidden = false; $("#rec-stop").hidden = true;
+      const blob = new Blob(chunks, { type: recorder.mimeType || type || "audio/mp4" });
+      if (!blob.size) return recUI("沒有錄到聲音，再試一次。Nothing was recorded. Try again.", true);
+      recAudio = await blobToDataURL(blob); recUI(); playAudio(recAudio);
+    };
+    recorder.start(); recStart = Date.now();
+    $("#rec-start").hidden = true; $("#rec-stop").hidden = false; $("#rec-play").hidden = $("#rec-del").hidden = true;
+    recUI("錄音中… 0 秒 Recording…");
+    recTimer = setInterval(() => { const sec = Math.floor((Date.now() - recStart) / 1000); recUI(`錄音中… ${sec} 秒 Recording…`); if (sec >= 10) recorder.state === "recording" && recorder.stop(); }, 250);
+  };
+  $("#rec-stop").onclick = () => { if (recorder?.state === "recording") recorder.stop(); };
+  $("#rec-play").onclick = () => recAudio && playAudio(recAudio);
+  $("#rec-del").onclick = () => { recAudio = null; recUI(); };
+  $("#rec-file").onchange = async e => {
+    const f = e.target.files[0]; if (!f) return;
+    if (f.size > 600000) return recUI("音檔太大，請剪短到 10 秒左右。The file is too large. Keep it to about 10 seconds.", true);
+    recAudio = await blobToDataURL(f); recUI(); playAudio(recAudio);
+  };
+  $("#sheet").addEventListener("close", () => { clearInterval(recTimer); if (recorder?.state === "recording") recorder.stop(); }, { once: true });
   $("#editor").onsubmit = async ev => {
     ev.preventDefault(); const st = $("#e-status"); st.className = "status"; st.textContent = "儲存中… Saving…";
     try {
@@ -584,6 +633,8 @@ function openEditor(id) {
       if (raw && !co) { st.className = "status err"; st.textContent = "座標格式看不懂，請用「25.0330, 121.5297」這種格式。Use the format 25.0330, 121.5297."; return; }
       data.lat = co ? co.lat : null; data.lng = co ? co.lng : null;
       data.radius = Number($("#e-radius").value) || 300;
+      if (recorder?.state === "recording") { st.className = "status err"; st.textContent = "請先按停止錄音。Stop the recording first."; return; }
+      data.phraseAudio = recAudio;
       const f = $("#e-photo").files[0]; if (f) data.secretPhoto = await shrinkToDataURL(f);
       await setDoc(doc(fs, "trips", tripId, "quests", id), data);
       $("#sheet").close();
@@ -608,6 +659,7 @@ async function createTrip() {
     const id = randomId(24), b = writeBatch(fs);
     EXAMPLES.forEach((q, i) => b.set(doc(fs, "trips", id, "quests", "ex" + (i + 1)), { ...q, example: true, secret: PH, secretPhoto: null }));
     await b.commit();
+    store.set("tsp-view", "guide");
     location.href = location.pathname + "?trip=" + id + "&role=guide";
   } catch (err) { st.className = "status err"; st.textContent = "建立失敗 Couldn't create: " + (err?.code || err?.message) + "。請確認 Firestore 規則和匿名登入都設定好了。Check the Firestore rules and Anonymous sign-in."; }
 }
@@ -619,7 +671,9 @@ document.addEventListener("click", async e => {
   if (t.id === "create") return createTrip();
   if (t.dataset.q) return openQuest(t.dataset.q);
   if (t.hasAttribute("data-close")) return $("#sheet").close();
-  if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); return q && speak(q.phraseZh, t); }
+  if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); if (!q) return;
+    if (q.phraseAudio) return playAudio(q.phraseAudio, () => { const w = $("#speak-status"); if (w) { w.hidden = false; w.textContent = "錄音播放失敗，改用手機語音。Couldn't play the recording, using the phone voice instead."; } speak(q.phraseZh, t); });
+    return speak(q.phraseZh, t); }
   if (t.hasAttribute("data-where")) {
     const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中… Locating…";
     try { const p = await locate(), d = haversine(p.latitude, p.longitude, q.lat, q.lng); w.className = "gps " + (d <= (q.radius || 300) ? "ok" : "far"); w.textContent = d <= (q.radius || 300) ? `你到了！可以打卡了 · You're here (${fmtDist(d)})` : `還有 ${fmtDist(d)} · ${fmtDist(d)} to go`; }

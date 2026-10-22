@@ -438,7 +438,7 @@ function renderSheet() {
     ${q.phraseZh ? `<div class="phrase"><span class="tag">Say it here · 這裡用得到</span><span class="zh">${esc(q.phraseZh)}</span>
       ${q.phrasePy ? `<span class="py">${esc(q.phrasePy)}</span>` : ""}<span>${esc(q.phraseEn || "")}</span>
       ${q.phraseTw ? `<span class="tw">台語 Taiwanese: ${esc(q.phraseTw)}</span>` : ""}
-      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div><span class="hint" id="speak-status" hidden></span></div>` : ""}
+      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div><span class="hint" id="speak-status" hidden></span><label class="f" id="voice-pick" hidden>聲音聽起來怪怪的？換一個 · Voice sounds odd? Pick another<select id="voice-select"></select></label></div>` : ""}
     <div class="row"><a class="btn" href="${esc(maps)}" target="_blank" rel="noopener">📍 Google Maps</a>${q.lat != null && !c ? `<button class="btn" data-where>我離這裡多遠？ How far?</button>` : ""}</div>
     <div class="gps" id="where"></div>
     ${c ? `<div class="stack"><span class="chip ok" style="justify-self:start">集到了 · Collected ${fmtDate(c.at)}</span>
@@ -451,6 +451,7 @@ function renderSheet() {
           <label class="f">一句話 · A line about it (optional)<textarea id="ci-note" maxlength="400" placeholder="What did you try? 你點了什麼？"></textarea></label>
           <button class="btn ink" type="submit">蓋章！ Stamp it</button><div class="status" id="ci-status"></div>
           <button class="btn" type="button" id="ci-override" hidden>GPS 不準，我確定我在這裡 · I'm really here</button></form>`}`;
+  fillVoices();
   if (c) { $("#c-note").textContent = c.note || ""; $("#secret-text").textContent = q.secret || "（出題者還沒寫訊息）Your guide hasn't written a message here yet."; }
 }
 async function shrinkToDataURL(file, max = 1024) {
@@ -497,11 +498,34 @@ async function doCheckin(override) {
 let voices = [];
 function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) { voices = []; } }
 if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.addEventListener?.("voiceschanged", loadVoices); }
-function pickVoice() {
-  if (!voices.length) loadVoices();
-  const zh = voices.filter(v => /^(zh|cmn)/i.test(v.lang));
-  return zh.find(v => /TW|Hant/i.test(v.lang)) || zh.find(v => /CN|Hans/i.test(v.lang)) || zh[0] || null;
+// iOS and macOS also list novelty voices (Eddy, Flo, Grandma, Rocko…) under zh-TW; they sound robotic, so rank them last.
+const NOVELTY = /eddy|flo|grandma|grandpa|reed|rocko|sandy|shelley|eloquence|bells|bubbles|jester|organ|superstar|trinoids|whisper|zarvox|bad news|good news|boing|cellos|wobble|albert|fred|junior|kathy|ralph/i;
+const zhVoices = () => { if (!voices.length) loadVoices(); return voices.filter(v => /^(zh|cmn)/i.test(v.lang) && !/HK|yue/i.test(v.lang)); };
+function voiceScore(v) {
+  let n = 0;
+  if (/TW|Hant/i.test(v.lang)) n += 100;
+  if (/meijia|美佳|hanhan|yating|zhiwei|hsiaochen|hsiaoyu|google/i.test(v.name)) n += 50;
+  if (/premium|enhanced|natural|neural|高品質|優化/i.test(v.name)) n += 30;
+  if (NOVELTY.test(v.name)) n -= 200;
+  if (v.localService) n += 5;
+  return n;
 }
+function pickVoice() {
+  const zh = zhVoices();
+  const saved = store.get("tsp-voice");
+  return zh.find(v => v.voiceURI === saved || v.name === saved) || [...zh].sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
+}
+function fillVoices() {
+  const sel = $("#voice-select"), wrap = $("#voice-pick"); if (!sel) return;
+  const zh = [...zhVoices()].sort((a, b) => voiceScore(b) - voiceScore(a));
+  if (zh.length < 2) { wrap.hidden = true; return; }
+  const cur = pickVoice();
+  sel.textContent = "";
+  for (const v of zh) { const o = document.createElement("option"); o.value = v.voiceURI || v.name; o.textContent = `${v.name} (${v.lang})`; if (v === cur) o.selected = true; sel.appendChild(o); }
+  wrap.hidden = false;
+  sel.onchange = () => { store.set("tsp-voice", sel.value); const q = quests.find(x => x.id === openQuestId); if (q) speak(q.phraseZh); };
+}
+if ("speechSynthesis" in window) speechSynthesis.addEventListener?.("voiceschanged", () => fillVoices());
 function speak(text, btn) {
   const say = (zh, en) => { const w = $("#speak-status"); if (w) { w.textContent = zh + " " + en; w.hidden = false; } };
   if (!("speechSynthesis" in window)) return say("這個瀏覽器不支援語音。", "This browser can't read text aloud.");

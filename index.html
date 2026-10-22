@@ -438,7 +438,7 @@ function renderSheet() {
     ${q.phraseZh ? `<div class="phrase"><span class="tag">Say it here · 這裡用得到</span><span class="zh">${esc(q.phraseZh)}</span>
       ${q.phrasePy ? `<span class="py">${esc(q.phrasePy)}</span>` : ""}<span>${esc(q.phraseEn || "")}</span>
       ${q.phraseTw ? `<span class="tw">台語 Taiwanese: ${esc(q.phraseTw)}</span>` : ""}
-      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div></div>` : ""}
+      <div class="row" style="margin-top:6px"><button class="btn" data-speak>🔊 聽發音 Listen</button></div><span class="hint" id="speak-status" hidden></span></div>` : ""}
     <div class="row"><a class="btn" href="${esc(maps)}" target="_blank" rel="noopener">📍 Google Maps</a>${q.lat != null && !c ? `<button class="btn" data-where>我離這裡多遠？ How far?</button>` : ""}</div>
     <div class="gps" id="where"></div>
     ${c ? `<div class="stack"><span class="chip ok" style="justify-self:start">集到了 · Collected ${fmtDate(c.at)}</span>
@@ -493,8 +493,28 @@ async function doCheckin(override) {
     btn.disabled = false;
   } finally { busy = false; }
 }
-function speak(text) {
-  try { const u = new SpeechSynthesisUtterance(text); u.lang = "zh-TW"; u.rate = .85; speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) {}
+// Voices load asynchronously on most browsers; keep the list fresh.
+let voices = [];
+function loadVoices() { try { voices = speechSynthesis.getVoices() || []; } catch (e) { voices = []; } }
+if ("speechSynthesis" in window) { loadVoices(); speechSynthesis.addEventListener?.("voiceschanged", loadVoices); }
+function pickVoice() {
+  if (!voices.length) loadVoices();
+  const zh = voices.filter(v => /^(zh|cmn)/i.test(v.lang));
+  return zh.find(v => /TW|Hant/i.test(v.lang)) || zh.find(v => /CN|Hans/i.test(v.lang)) || zh[0] || null;
+}
+function speak(text, btn) {
+  const say = (zh, en) => { const w = $("#speak-status"); if (w) { w.textContent = zh + " " + en; w.hidden = false; } };
+  if (!("speechSynthesis" in window)) return say("這個瀏覽器不支援語音。", "This browser can't read text aloud.");
+  const voice = pickVoice();
+  if (!voice && voices.length) return say("這支手機沒有安裝中文語音。可以到「設定 → 輔助使用 → 朗讀內容 → 聲音 → 中文」下載。", "No Chinese voice on this device. Download one in Settings → Accessibility → Spoken Content → Voices → Chinese.");
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = voice ? voice.lang : "zh-TW"; if (voice) u.voice = voice; u.rate = .8;
+  u.onerror = e => say("播放失敗，請確認手機沒有靜音、音量有開。", "Couldn't play. Check that your phone isn't muted.");
+  // Safari drops an utterance queued right after cancel(), so only cancel when something is playing.
+  if (speechSynthesis.speaking || speechSynthesis.pending) { speechSynthesis.cancel(); setTimeout(() => speechSynthesis.speak(u), 120); }
+  else speechSynthesis.speak(u);
+  try { speechSynthesis.resume(); } catch (e) {}
+  if (btn) { btn.disabled = true; setTimeout(() => { btn.disabled = false; }, 800); }
 }
 
 /* ---------- guide editor ---------- */
@@ -575,7 +595,7 @@ document.addEventListener("click", async e => {
   if (t.id === "create") return createTrip();
   if (t.dataset.q) return openQuest(t.dataset.q);
   if (t.hasAttribute("data-close")) return $("#sheet").close();
-  if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); return q && speak(q.phraseZh); }
+  if (t.hasAttribute("data-speak")) { const q = quests.find(x => x.id === openQuestId); return q && speak(q.phraseZh, t); }
   if (t.hasAttribute("data-where")) {
     const q = quests.find(x => x.id === openQuestId), w = $("#where"); w.className = "gps"; w.textContent = "定位中… Locating…";
     try { const p = await locate(), d = haversine(p.latitude, p.longitude, q.lat, q.lng); w.className = "gps " + (d <= (q.radius || 300) ? "ok" : "far"); w.textContent = d <= (q.radius || 300) ? `你到了！可以打卡了 · You're here (${fmtDist(d)})` : `還有 ${fmtDist(d)} · ${fmtDist(d)} to go`; }

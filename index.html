@@ -9,7 +9,7 @@
 <title>寶島集章護照</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
 :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
 body { margin: 0; }
@@ -22,8 +22,8 @@ img { max-width: 100%; }
   --paper: #e6ede7; --page: #f7f9f5; --fg: #1d2a26; --muted: #5a6a64; --line: #cdd8d0;
   --st-red: #c4372c; --st-blue: #2c4d99; --st-green: #2d7a4c; --st-plum: #7c3b8e; --st-brown: #9a5a1e;
   --ok: #2d7a4c; --warn: #a3620f;
-  --f-display: "LXGW WenKai TC", "Kaiti TC", "STKaiti", "Noto Serif TC", serif;
-  --f-body: "Noto Sans TC", -apple-system, "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --f-display: "LXGW WenKai TC", "Kaiti TC", "STKaiti", "Noto Serif TC", "Noto Sans SC", serif;
+  --f-body: "Noto Sans TC", "Noto Sans SC", -apple-system, "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
@@ -152,6 +152,8 @@ textarea { resize: vertical; min-height: 64px; }
 @media (prefers-reduced-motion: reduce) { .slot.fresh svg { animation: none; } .bar i { transition: none; } }
 
 .links { display: grid; gap: 10px; }
+.script-toggle { margin-left: auto; align-self: flex-start; flex: none; background: none; border: 1px solid color-mix(in srgb, var(--gold) 60%, transparent); color: var(--cover-fg); border-radius: 99px; padding: 4px 10px; font-size: 13px; }
+.script-toggle b { color: var(--gold); }
 .link-box { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--page); }
 .link-box code { font-family: var(--f-mono); font-size: 12px; overflow-wrap: anywhere; user-select: all; }
 .gps { font-size: 12.5px; color: var(--muted); }
@@ -178,6 +180,7 @@ textarea { resize: vertical; min-height: 64px; }
         <div class="sub">Republic of Adventures · 寶島</div>
         <h1>寶島集章護照</h1>
       </div>
+    <button class="script-toggle" id="script-toggle" type="button" aria-label="Switch between Traditional and Simplified Chinese"></button>
     </div>
     <div class="meter">
       <div class="count" id="count">0<small> / 0</small></div>
@@ -196,6 +199,7 @@ textarea { resize: vertical; min-height: 64px; }
 <main><div class="wrap" id="view"></div></main>
 <dialog id="sheet"><div class="sheet" id="sheet-body"></div></dialog>
 
+<script src="vendor/opencc-t2cn.js"></script>
 <script type="module">
 /* ============================================================
    1) 把 Firebase 給你的設定貼在這裡（Project settings → Your apps → SDK setup and configuration → Config）
@@ -237,6 +241,33 @@ let fs = null, ready = false, failed = "";
 let quests = [], checkins = {}, notes = [];
 let view = store.get("tsp-view") || "passport", fresh = null;
 const configured = !firebaseConfig.apiKey.startsWith("PASTE");
+
+/* ---------- 繁體 / 简体 ---------- */
+// Content is written in Traditional Chinese; in Simplified mode every text node on screen is converted as it appears.
+// The traveler link defaults to Simplified, the guide link to Traditional; the header button switches per device.
+let script = store.get("tsp-script") || (isGuide ? "tw" : "cn");
+const toCN = window.OpenCC ? OpenCC.Converter({ from: "tw", to: "cn" }) : null;
+function convertNode(root) {
+  if (script !== "cn" || !toCN) return;
+  if (root.nodeType === 3) { const t = toCN(root.nodeValue); if (t !== root.nodeValue) root.nodeValue = t; return; }
+  if (root.nodeType !== 1 || root.closest?.("textarea, input")) return;
+  const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) { const t = toCN(n.nodeValue); if (t !== n.nodeValue) n.nodeValue = t; }
+  root.querySelectorAll?.("[placeholder], [aria-label]").forEach(el => {
+    for (const a of ["placeholder", "aria-label"]) { const v = el.getAttribute(a); if (v) { const t = toCN(v); if (t !== v) el.setAttribute(a, t); } }
+  });
+}
+new MutationObserver(ms => { for (const m of ms) m.addedNodes.forEach(convertNode); }).observe(document.body, { childList: true, subtree: true });
+function applyScript() {
+  document.documentElement.lang = script === "cn" ? "zh-Hans" : "zh-Hant";
+  $("#script-toggle").innerHTML = script === "cn" ? "繁 / <b>简</b>" : "<b>繁</b> / 简";
+  $("#script-toggle").title = script === "cn" ? "切换到繁体字" : "切換到簡體字";
+}
+$("#script-toggle").addEventListener("click", () => {
+  script = script === "cn" ? "tw" : "cn"; store.set("tsp-script", script);
+  location.reload();
+});
+applyScript(); convertNode(document.body);
 
 /* ---------- distance / GPS ---------- */
 function haversine(a, b, c, d) {
